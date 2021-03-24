@@ -12,14 +12,17 @@ static void startup__test_gpio_a() {
   RCC->AHB1ENR |= port_a_enable;
   GPIOA->MODER &= ~(3UL << 0);
   GPIOA->MODER |= pin_0_output;
-
-  while (1) {
-    delay(1000000);
-    GPIOA->ODR ^= (1UL << 0);
-  }
 }
 
 int main() {
   startup__test_gpio_a();
+  delay(1000000);
+  fprintf(stderr, "ads");
+  delay(1000000);
+  fprintf(stderr, "ads");
+  delay(1000000);
+  fprintf(stderr, "ads");
+  delay(1000000);
+  fprintf(stderr, "ads");
   return 0;
 }

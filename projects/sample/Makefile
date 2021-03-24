@@ -1,7 +1,7 @@
 CC = ../../toolchain/mac/gcc-arm-none-eabi-10-2020-q4-major/bin/./arm-none-eabi-gcc
 MARCH = cortex-m4
 BUILD = ./build
-CFLAGS = -c -mcpu=$(MARCH) -mthumb -std=gnu11 -Wall -O0
+CFLAGS = -c -mcpu=$(MARCH) -mthumb -mfloat-abi=softfp -std=gnu11 -Wall -O0
 INC = -I./l0_lowlevel/arm-software/cmsis/core/ -I./
 LDFLAGS = -mcpu=$(MARCH) -mthumb -mfloat-abi=softfp --specs=nano.specs -T l0_lowlevel/linker/stm32f411ceux_linker.ld -Wl,-Map=${BUILD}/final.map
 
@@ -24,6 +24,9 @@ ${BUILD}/final.bin: ${BUILD}/final.elf
 
 clean:
 	rm -rf ${BUILD}/*.o ${BUILD}/*.elf ${BUILD}/*.bin ${BUILD}/*.map
+
+dump:
+	../../toolchain/mac/gcc-arm-none-eabi-10-2020-q4-major/bin/./arm-none-eabi-objdump -h ${BUILD}/final.elf
 
 flash: ${BUILD}/final.bin
 	../../st-programmer/stm32flash/./stm32flash -w ${BUILD}/final.bin -v -g 0x0 /dev/tty.SLAB_USBtoUART

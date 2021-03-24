@@ -24,9 +24,9 @@ SECTIONS
     *(.fini)
     *(.rodata*)
     . = ALIGN(4);
-    __text_end__ = .;
   } > flash_512k
 
+  __text_end__ = LOADADDR(.data);
   .data : ALIGN(4)
   {
     __data_start__ = .;

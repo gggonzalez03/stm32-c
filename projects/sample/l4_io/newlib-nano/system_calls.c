@@ -4,10 +4,18 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/stat.h>
+#include "stm32f411xe.h"
 
 register void* stack_ptr asm("sp");
 
+/**
+ * Note: https://stackoverflow.com/questions/1716296/why-does-printf-not-flush-after-the-call-unless-a-newline-is-in-the-format-strin
+ * printf does not flush the buffer unless there is "\n" in the string.
+ * So printf's have to have "\n" at the end. e.g. printf("Hello World\n")
+ * Alternatively, fprintf(stderr, "Hello World") can be used (will work without "\n")
+ **/ 
 int _write (int file, char * ptr, int len) {
+  GPIOA->ODR ^= (1UL << 0);
   return 0;
 }
 
