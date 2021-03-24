@@ -27,3 +27,5 @@ clean:
 
 flash: ${BUILD}/final.bin
 	../../st-programmer/stm32flash/./stm32flash -w ${BUILD}/final.bin -v -g 0x0 /dev/tty.SLAB_USBtoUART
+
+$(shell   mkdir -p $(BUILD))
