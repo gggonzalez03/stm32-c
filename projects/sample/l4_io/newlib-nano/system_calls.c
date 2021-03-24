@@ -15,7 +15,7 @@ register void* stack_ptr asm("sp");
  * Alternatively, fprintf(stderr, "Hello World") can be used (will work without "\n")
  **/ 
 int _write (int file, char * ptr, int len) {
-  GPIOA->ODR ^= (1UL << 0);
+  GPIOC->ODR ^= (1UL << 13);
   return 0;
 }
 
