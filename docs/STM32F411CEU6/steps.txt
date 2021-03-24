@@ -1,0 +1,3 @@
+Bootloader Information:
+Boot modes - nBoot1 and nBoot0 bits
+UART pins for boot loading - check data sheet (for stm32f4, these are PA9 and PA10)

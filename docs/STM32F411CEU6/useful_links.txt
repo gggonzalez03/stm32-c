@@ -1,0 +1,2 @@
+Reading and writing firmware on an STM32 using serial boot loader:
+https://cybergibbons.com/hardware-hacking/reading-and-writing-firmware-on-an-stm32-using-the-serial-bootloader/
