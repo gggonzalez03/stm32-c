@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include "stm32f411xe.h"
 
 static void delay(uint32_t ms) {
