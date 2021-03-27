@@ -51,6 +51,7 @@ static void clock__set_ahb_prescaler(uint8_t prescaler) {
  * Enable PLL to get 100MHz clock source
  * NOTE: If this frequency is used, make sure to change the value of VOS[1:0]
  * Refer to Chapter 5.4.1
+ * Also change clock__get_core_clock_frq() return value
  **/ 
 static void clock__enable_pll_100MHz()
 {
@@ -83,7 +84,8 @@ static void clock__enable_pll_100MHz()
  * Enable PLL to get 84MHz clock source
  * NOTE:  84MHz is chosen because
  *        1. VOS reset value will not need to be changed (See Chapter 5.4.1)
- *        2. SysTick calibration value is fixed to 10500 (See Chapter 10.1.2)
+ *        2. More importantly, SysTick calibration value is fixed to 10500 (See Chapter 10.1.2)
+ *           This allows us to have 1ms SysTick interrupt with no additional configurations.
  **/ 
 static void clock__enable_pll_84MHz()
 {
@@ -147,5 +149,5 @@ void clock__init_system_clock()
  **/
 uint32_t clock__get_core_clock_frq()
 {
-  return 100 * 1000 * 1000;
+  return 84 * 1000 * 1000;
 }
