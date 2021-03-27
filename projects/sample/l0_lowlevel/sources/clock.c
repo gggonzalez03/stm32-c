@@ -14,6 +14,40 @@ static void clock__enable_hse()
 }
 
 /**
+ * Turn on power to APB1
+ **/
+static void clock__power_on_apb1() {
+  RCC->APB1ENR |= (1UL << 28);
+}
+
+/**
+ * Set APB1 Prescaler
+ * WARNING: APB1 should have a prescaler such that the resulting
+ * frequency is less than or equal to 50MHz. This is a low speed
+ * peripheral bus.
+ **/
+static void clock__set_apb1_prescaler(uint8_t prescaler) {
+  RCC->CFGR &= ~(7UL << 10);
+  RCC->CFGR |= (prescaler << 10);
+}
+
+/**
+ * Set APB2 Prescaler
+ **/
+static void clock__set_apb2_prescaler(uint8_t prescaler) {
+  RCC->CFGR &= ~(7UL << 13);
+  RCC->CFGR |= (prescaler << 13);
+}
+
+/**
+ * Set AHB Prescaler
+ **/ 
+static void clock__set_ahb_prescaler(uint8_t prescaler) {
+  RCC->CFGR &= ~(0xF << 4);
+  RCC->CFGR |= (prescaler << 4);
+}
+
+/**
  * Enable PLL to get 100MHz clock source
  **/ 
 static void clock__enable_pll_100MHz()
@@ -64,6 +98,10 @@ static void clock__select_pll_as_source()
 void clock__init_system_clock()
 {
   clock__enable_hse();
+  clock__set_apb1_prescaler(2U);
+  clock__set_apb2_prescaler(1U);
+  clock__set_ahb_prescaler(0U);
+  clock__power_on_apb1();
   clock__enable_pll_100MHz();
   clock__select_pll_as_source();
 }
