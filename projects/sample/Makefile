@@ -1,37 +1,53 @@
+# Reference: https://makefiletutorial.com
+
 CC = ../../toolchain/mac/gcc-arm-none-eabi-10-2020-q4-major/bin/./arm-none-eabi-gcc
+OBJCOPY = ../../toolchain/mac/gcc-arm-none-eabi-10-2020-q4-major/bin/./arm-none-eabi-objcopy
+OBJDUMP = ../../toolchain/mac/gcc-arm-none-eabi-10-2020-q4-major/bin/./arm-none-eabi-objdump
+BUILD_DIR := ./build
+FINAL_BINARY := final_binary.bin
+FINAL_ELF := final_elf.elf
 MARCH = cortex-m4
-BUILD = ./build
-CFLAGS = -c -mcpu=$(MARCH) -mthumb -mfloat-abi=softfp -std=gnu11 -Wall -O0
-INC = -I./l0_lowlevel/arm-software/cmsis/core/ -I./ -I./l0_lowlevel/includes/
-LDFLAGS = -mcpu=$(MARCH) -mthumb -mfloat-abi=softfp --specs=nano.specs -T l0_lowlevel/linker/stm32f411ceux_linker.ld -Wl,-Map=${BUILD}/final.map
+LINKER_FILE := l0_lowlevel/linker/stm32f411ceux_linker.ld
+OPTIMIZATION = 0
+CFLAGS = -c -mcpu=$(MARCH) -mthumb -mfloat-abi=softfp -std=gnu11 -Wall -O$(OPTIMIZATION)
+LDFLAGS = -mcpu=$(MARCH) -mthumb -mfloat-abi=softfp --specs=nano.specs -T $(LINKER_FILE) -Wl,-Map=${BUILD_DIR}/final.map
 
-${BUILD}/all: ${BUILD}/main.o ${BUILD}/clock.o ${BUILD}/stm32f411ceux_startup.o ${BUILD}/system_calls.o ${BUILD}/final.elf ${BUILD}/final.bin
+SRC_DIRS := ./
+INC_DIRS := $(shell find $(SRC_DIRS) -type d)
+INC_FLAGS := $(addprefix -I,$(INC_DIRS))
+# Preprocessor Control Flags. Generate intermediate Makefiles
+# Reference: https://gcc.gnu.org/onlinedocs/gcc/Preprocessor-Options.html#Preprocessor-Options
+PREP_CON_FLAGS := $(INC_FLAGS) -MMD -MP
 
-${BUILD}/main.o: l5_application/main.c
-	$(CC) $(INC) $(CFLAGS) -o $@ $^
+# Find names of C source files
+SRCS := $(shell find $(SRC_DIRS) -name *.c)
+# Geneate .o names for the C source files found, e.g., main.c => ./build/main.o
+OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
+# Generate dependencies file names (suffixed with .d)
+# Reference as to why: https://stackoverflow.com/questions/19114410/what-is-d-file-after-building-with-make
+DEPS := $(OBJS:.o=.d)
 
-${BUILD}/clock.o: l0_lowlevel/sources/clock.c
-	$(CC) $(INC) $(CFLAGS) -o $@ $^
+# Build the final .bin file that is flashable to the mcu
+$(BUILD_DIR)/$(FINAL_BINARY): ${BUILD_DIR}/$(FINAL_ELF)
+	$(OBJCOPY) -O binary ${BUILD_DIR}/$(FINAL_ELF) ${BUILD_DIR}/$(FINAL_BINARY)
 
-${BUILD}/stm32f411ceux_startup.o: l0_lowlevel/startup/stm32f411ceux_startup.c
-	$(CC) $(INC) $(CFLAGS) -o $@ $^
+# Build the .elf file
+$(BUILD_DIR)/$(FINAL_ELF): $(OBJS)
+	$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
-${BUILD}/system_calls.o:	l4_io/newlib-nano/system_calls.c
-	$(CC) $(INC) $(CFLAGS) -o $@ $^
-
-${BUILD}/final.elf: ${BUILD}/main.o ${BUILD}/clock.o ${BUILD}/stm32f411ceux_startup.o ${BUILD}/system_calls.o
-	$(CC) $(LDFLAGS) -o $@ $^
-
-${BUILD}/final.bin: ${BUILD}/final.elf
-	../../toolchain/mac/gcc-arm-none-eabi-10-2020-q4-major/bin/./arm-none-eabi-objcopy -O binary ${BUILD}/final.elf ${BUILD}/final.bin
-
-clean:
-	rm -rf ${BUILD}/*.o ${BUILD}/*.elf ${BUILD}/*.bin ${BUILD}/*.map
+# Build C source files
+$(BUILD_DIR)/%.c.o: %.c
+	mkdir -p $(dir $@)
+	$(CC) $(PREP_CON_FLAGS) $(CFLAGS) -c $< -o $@
 
 dump:
-	../../toolchain/mac/gcc-arm-none-eabi-10-2020-q4-major/bin/./arm-none-eabi-objdump -h ${BUILD}/final.elf
+	$(OBJDUMP) -h ${BUILD_DIR}/$(FINAL_ELF)
 
-flash: ${BUILD}/final.bin
-	../../st-programmer/stm32flash/./stm32flash -w ${BUILD}/final.bin -v -g 0x0 /dev/tty.SLAB_USBtoUART
+flash: ${BUILD_DIR}/$(FINAL_BINARY)
+	../../st-programmer/stm32flash/./stm32flash -w ${BUILD_DIR}/$(FINAL_BINARY) -v -g 0x0 /dev/tty.SLAB_USBtoUART
 
-$(shell   mkdir -p $(BUILD))
+.PHONY: clean
+clean:
+	rm -r $(BUILD_DIR)
+
+-include $(DEPS)
