@@ -18,8 +18,8 @@ int main() {
   config_port_c_pin_13();
 
   while (1) {
+    GPIOC->ODR ^= (1UL << 13);
     delay(1000000);
-    fprintf(stderr, "Hello World");
   }
   return 0;
 }

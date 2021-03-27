@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <sys/stat.h>
-#include "stm32f411xe.h"
 
 register void* stack_ptr asm("sp");
 
@@ -15,7 +14,6 @@ register void* stack_ptr asm("sp");
  * Alternatively, fprintf(stderr, "Hello World") can be used (will work without "\n")
  **/ 
 int _write (int file, char * ptr, int len) {
-  GPIOC->ODR ^= (1UL << 13);
   return 0;
 }
 
