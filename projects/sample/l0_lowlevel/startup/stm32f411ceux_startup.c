@@ -2,6 +2,7 @@
 
 #include "stm32f411xe.h"
 #include "clock.h"
+#include "flash.h"
 
 extern void main(void);
 
@@ -209,6 +210,7 @@ void Reset_Handler(void) {
   startup__init_data_sram();
   startup__init_bss_sram();
   
+  flash__config_3v_frq_64_90MHz();
   clock__init_system_clock();
   
   main();

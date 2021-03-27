@@ -49,6 +49,8 @@ static void clock__set_ahb_prescaler(uint8_t prescaler) {
 
 /**
  * Enable PLL to get 100MHz clock source
+ * NOTE: If this frequency is used, make sure to change the value of VOS[1:0]
+ * Refer to Chapter 5.4.1
  **/ 
 static void clock__enable_pll_100MHz()
 {
@@ -65,6 +67,39 @@ static void clock__enable_pll_100MHz()
   uint32_t cfgr_pll_divider_n = (200UL << 6);
   uint32_t cfgr_pll_divider_p = (2UL << 16);
   uint32_t cfgr_pll_divider_q = (5UL << 24);
+  uint32_t cfgr_pll_src_hse = (1UL << 22);
+
+  uint32_t cr_pll_on = (1UL << 24);
+  uint32_t cr_pll_ready = (1UL << 25);
+
+  RCC->PLLCFGR &= ~(0xFFFFFFFF);
+  RCC->PLLCFGR |= (cfgr_pll_src_hse | cfgr_pll_divider_m | cfgr_pll_divider_n | cfgr_pll_divider_p | cfgr_pll_divider_q);
+
+  RCC->CR |= cr_pll_on;
+  while (!(RCC->CR & cr_pll_ready));
+}
+
+/**
+ * Enable PLL to get 84MHz clock source
+ * NOTE:  84MHz is chosen because
+ *        1. VOS reset value will not need to be changed (See Chapter 5.4.1)
+ *        2. SysTick calibration value is fixed to 10500 (See Chapter 10.1.2)
+ **/ 
+static void clock__enable_pll_84MHz()
+{
+  /**
+   * f_pll_input = 25MHz (External Crystal)
+   * f_pll_desired = 84MHz
+   * 
+   * f_vco_input = f_pll_input / M              => 1MHz = 25MHz / 25MHz
+   * f_vco_clk = f_pll_input * (PLLN /  PLLM)   => 168MHz = f_pll_input * (168 / 25)
+   * f_pll_output = f_vco_clk / (PLLP)          => f_pll_desired = 168MHz / (2)
+   * f_usb_otg_fs_and_sdio = f_vco_clk / PLLQ   => 42MHz = f_vco_clk / 4
+   **/
+  uint32_t cfgr_pll_divider_m = (25UL << 0);
+  uint32_t cfgr_pll_divider_n = (168UL << 6);
+  uint32_t cfgr_pll_divider_p = (2UL << 16);
+  uint32_t cfgr_pll_divider_q = (4UL << 24);
   uint32_t cfgr_pll_src_hse = (1UL << 22);
 
   uint32_t cr_pll_on = (1UL << 24);
@@ -102,7 +137,7 @@ void clock__init_system_clock()
   clock__set_apb2_prescaler(1U);
   clock__set_ahb_prescaler(0U);
   clock__power_on_apb1();
-  clock__enable_pll_100MHz();
+  clock__enable_pll_84MHz();
   clock__select_pll_as_source();
 }
 
