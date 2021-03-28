@@ -3,6 +3,7 @@
 CC = ../../toolchain/mac/gcc-arm-none-eabi-10-2020-q4-major/bin/./arm-none-eabi-gcc
 OBJCOPY = ../../toolchain/mac/gcc-arm-none-eabi-10-2020-q4-major/bin/./arm-none-eabi-objcopy
 OBJDUMP = ../../toolchain/mac/gcc-arm-none-eabi-10-2020-q4-major/bin/./arm-none-eabi-objdump
+SIZE = ../../toolchain/mac/gcc-arm-none-eabi-10-2020-q4-major/bin/./arm-none-eabi-size
 BUILD_DIR := ./build
 FINAL_BINARY := final_binary.bin
 FINAL_ELF := final_elf.elf
@@ -45,6 +46,10 @@ dump:
 
 flash: ${BUILD_DIR}/$(FINAL_BINARY)
 	../../st-programmer/stm32flash/./stm32flash -w ${BUILD_DIR}/$(FINAL_BINARY) -v -g 0x0 /dev/tty.SLAB_USBtoUART
+
+.PHONY: size
+size:
+	$(SIZE) --format=berkeley ${BUILD_DIR}/$(FINAL_ELF)
 
 .PHONY: clean
 clean:
