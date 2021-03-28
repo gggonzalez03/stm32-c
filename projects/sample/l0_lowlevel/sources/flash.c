@@ -3,7 +3,7 @@
 
 
 void flash__enable_prefetch() {
-  FLASH->ACR |= (1UL << 8);
+  FLASH->ACR |= (1UL << 8 | 1UL << 9 | 1UL << 10);
 }
 
 void flash__set_latency(uint8_t latency) {
