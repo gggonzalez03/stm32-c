@@ -1,1 +1,0 @@
-stm32flash -w ../../projects/sample/final.bin -v -g 0x0 /dev/tty.SLAB_USBtoUART
