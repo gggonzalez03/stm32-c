@@ -66,7 +66,7 @@ static void clock__enable_pll_100MHz()
    **/
   uint32_t cfgr_pll_divider_m = (25UL << 0);
   uint32_t cfgr_pll_divider_n = (200UL << 6);
-  uint32_t cfgr_pll_divider_p = (2UL << 16);
+  uint32_t cfgr_pll_divider_p = (0UL << 16);
   uint32_t cfgr_pll_divider_q = (5UL << 24);
   uint32_t cfgr_pll_src_hse = (1UL << 22);
 
@@ -100,7 +100,7 @@ static void clock__enable_pll_84MHz()
    **/
   uint32_t cfgr_pll_divider_m = (25UL << 0);
   uint32_t cfgr_pll_divider_n = (168UL << 6);
-  uint32_t cfgr_pll_divider_p = (2UL << 16);
+  uint32_t cfgr_pll_divider_p = (0UL << 16);
   uint32_t cfgr_pll_divider_q = (4UL << 24);
   uint32_t cfgr_pll_src_hse = (1UL << 22);
 
@@ -135,10 +135,10 @@ static void clock__select_pll_as_source()
 void clock__init_system_clock()
 {
   clock__enable_hse();
-  clock__set_apb1_prescaler(2U);
-  clock__set_apb2_prescaler(1U);
-  clock__set_ahb_prescaler(0U);
   clock__power_on_apb1();
+  clock__set_apb1_prescaler(4U);
+  clock__set_apb2_prescaler(0U);
+  clock__set_ahb_prescaler(0U);
   clock__enable_pll_84MHz();
   clock__select_pll_as_source();
 }
