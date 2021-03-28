@@ -22,7 +22,7 @@ typedef enum {
  **/ 
 typedef enum {
   GPIO__8MHz = 0,
-  GPIO__50MHz,
+  GPIO__50MHz
 } gpio__speed_e;
 
 /**
@@ -62,11 +62,12 @@ gpio__gpio_s gpio__configure_as_input(gpio__port_e port, uint8_t pin);
 gpio__gpio_s gpio__configure_as_output(gpio__port_e port, uint8_t pin);
 gpio__gpio_s gpio__configure_with_function(gpio__port_e port, uint8_t pin, gpio__alternate_function_e function);
 
-void gpio__configure_speed(gpio__speed_e speed);
+void gpio__configure_speed(gpio__gpio_s gpio, gpio__speed_e speed);
 
 void gpio__set_function(gpio__gpio_s gpio, gpio__alternate_function_e function);
 void gpio__set_as_input(gpio__gpio_s gpio);
 void gpio__set_as_output(gpio__gpio_s gpio);
+void gpio__set_as_alternate_function(gpio__gpio_s gpio);
 
 void gpio__enable_pull_up_resistor(gpio__gpio_s gpio);
 void gpio__enable_pull_down_resistor(gpio__gpio_s gpio);

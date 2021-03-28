@@ -36,11 +36,43 @@ gpio__gpio_s gpio__configure_as_output(gpio__port_e port, uint8_t pin)
   return gpio;
 }
 
-gpio__gpio_s gpio__configure_with_function(gpio__port_e port, uint8_t pin, gpio__alternate_function_e function);
+gpio__gpio_s gpio__configure_with_function(gpio__port_e port, uint8_t pin, gpio__alternate_function_e function)
+{
+  gpio__gpio_s gpio = gpio__construct(port, pin);
+  gpio__set_as_alternate_function(gpio);
+  gpio__set_function(gpio, function);
+  return gpio;
+}
 
-void gpio__configure_speed(gpio__speed_e speed);
+void gpio__configure_speed(gpio__gpio_s gpio, gpio__speed_e speed)
+{
+  GPIO_TypeDef* gpio_port = (GPIO_TypeDef*)gpio__memory_map[gpio.port];
 
-void gpio__set_function(gpio__gpio_s gpio, gpio__alternate_function_e function);
+  if (gpio_port == NULL || gpio.pin > 15)
+    return;
+  
+  gpio_port->OSPEEDR &= ~(3UL << (gpio.pin * 2));
+  gpio_port->OSPEEDR |= (speed << (gpio.pin * 2));
+}
+
+void gpio__set_function(gpio__gpio_s gpio, gpio__alternate_function_e function)
+{
+  GPIO_TypeDef* gpio_port = (GPIO_TypeDef*)gpio__memory_map[gpio.port];
+
+  if (gpio_port == NULL || gpio.pin > 15)
+    return;
+
+  if (gpio.pin < 8)
+  {
+    gpio_port->AFR[0] &= ~(0xF << (gpio.pin * 4));
+    gpio_port->AFR[0] |= (function << (gpio.pin * 4));
+  }
+  else
+  {
+    gpio_port->AFR[1] &= ~(0xF << ((gpio.pin - 8) * 4));
+    gpio_port->AFR[1] |= (function << ((gpio.pin - 8) * 4));
+  }
+}
 
 void gpio__set_as_input(gpio__gpio_s gpio)
 {
@@ -61,6 +93,17 @@ void gpio__set_as_output(gpio__gpio_s gpio)
   
   gpio_port->MODER &= ~(3UL << (gpio.pin * 2));
   gpio_port->MODER |= (1UL << (gpio.pin * 2));
+}
+
+void gpio__set_as_alternate_function(gpio__gpio_s gpio)
+{
+  GPIO_TypeDef* gpio_port = (GPIO_TypeDef*)gpio__memory_map[gpio.port];
+
+  if (gpio_port == NULL || gpio.pin > 15)
+    return;
+  
+  gpio_port->MODER &= ~(3UL << (gpio.pin * 2));
+  gpio_port->MODER |= (2UL << (gpio.pin * 2));
 }
 
 void gpio__enable_pull_up_resistor(gpio__gpio_s gpio)
