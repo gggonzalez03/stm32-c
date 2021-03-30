@@ -1,0 +1,18 @@
+1. Download FreeRTOS
+2. Copy entire include folder from FreeRTOS download
+3. Copy needed source files from FreeRTOS download
+4. Copy specific port files (depending on compiler and mcu architecture)
+5. Copy the FreeRTOSConfig.h file from a demo application for an mcu similar to yours
+6. Modify the FreeRTOSConfig.h to your needs
+    configCPU_CLOCK_HZ
+    configCPU_CLOCK_HZ
+    configMINIMAL_STACK_SIZE
+    configMAX_PRIORITIES
+    configMAX_SYSCALL_INTERRUPT_PRIORITY && configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY
+7. Copy heap_3.c
+    heap_1.c may be a better for safety critical applications...
+8. Implement these functions: https://www.freertos.org/a00016.html
+
+
+Great resources:
+https://dzone.com/articles/arm-cortex-m-interrupts-and-freertos-part-3

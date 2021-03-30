@@ -6,7 +6,14 @@
 #include "gpio.h"
 #include "clock.h"
 
-static void crude_delay_ms(uint32_t ms) {
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+
+static SemaphoreHandle_t message;
+
+static void crude_delay_ms(uint32_t ms)
+{
   uint32_t count_up_to = TIM2->CNT + (ms * 1000);
   while (TIM2->CNT < count_up_to);
 }
@@ -76,22 +83,41 @@ void mco_1_enable()
   RCC->CFGR |= (mco_1_prescaler | mco_1_select_pll);
 }
 
-int main() {
-  gpio__port_clock_enable(GPIO__PORT_A);
-  gpio__port_clock_enable(GPIO__PORT_C);
-  gpio__gpio_s gpio_0 = gpio__configure_as_output(GPIO__PORT_C, 13);
-  gpio__gpio_s gpio_1 = gpio__configure_as_output(GPIO__PORT_C, 15);
-
-  timer__enable_counter();
-  uart__configure_uart_1();
-
-  char byte;
-
-  while (1) {
-    uart__receive_byte(&byte);
-    uart__transfer_byte(byte);
-    // crude_delay_ms(1000);
-    // gpio__toggle(gpio_1);
+void led_sender_task(void* parameter)
+{
+  while (1)
+  {
+    xSemaphoreGive(message);
+    vTaskDelay(300);
   }
+}
+
+void led_receiver_task(void* parameter)
+{
+  uint8_t* pin = (uint8_t*)parameter;
+  gpio__gpio_s gpio = gpio__configure_as_output(GPIO__PORT_C, *pin);
+  
+  while (1)
+  {
+    if (xSemaphoreTake(message, portMAX_DELAY))
+    {
+      gpio__toggle(gpio);
+    }
+  }
+}
+
+int main()
+{
+  static uint8_t led_0 = 15;
+  gpio__port_clock_enable(GPIO__PORT_C);
+  gpio__gpio_s gpio_0 = gpio__configure_as_output(GPIO__PORT_C, led_0);
+
+  message = xSemaphoreCreateBinary();
+
+  xTaskCreate(led_sender_task, "led sender task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+  xTaskCreate(led_receiver_task, "led receiver task", configMINIMAL_STACK_SIZE, &led_0, 1, NULL);
+
+  vTaskStartScheduler();
+
   return 0;
 }

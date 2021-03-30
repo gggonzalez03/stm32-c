@@ -45,7 +45,7 @@ dump:
 	$(OBJDUMP) -h ${BUILD_DIR}/$(FINAL_ELF)
 
 flash: ${BUILD_DIR}/$(FINAL_BINARY)
-	../../st-programmer/stm32flash/./stm32flash -w ${BUILD_DIR}/$(FINAL_BINARY) -v -g 0x0 /dev/tty.SLAB_USBtoUART
+	../../st-programmer/stm32flash/./stm32flash -w ${BUILD_DIR}/$(FINAL_BINARY) -b 115200 -v -g 0x0 /dev/tty.SLAB_USBtoUART
 
 .PHONY: size
 size:
