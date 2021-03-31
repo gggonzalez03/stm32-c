@@ -183,6 +183,11 @@ void* interrupt_vector_table[] __attribute__((section(".interrupt_vector_table")
   (void*)SPI5_IRQHandler,
 };
 
+// See Chapter 4.6.6 of the Programmer's Manual
+static void startup__init_fpu(void) {
+  SCB->CPACR |= (0xF << 20);
+}
+
 static void startup__init_data_sram(void) {
   extern uint32_t __text_end__;
   extern uint32_t __data_end__;
@@ -209,6 +214,7 @@ static void startup__init_bss_sram(void) {
 void Reset_Handler(void) {
   startup__init_data_sram();
   startup__init_bss_sram();
+  startup__init_fpu();
   
   flash__config_3v_frq_64_90MHz();
   clock__init_system_clock();
