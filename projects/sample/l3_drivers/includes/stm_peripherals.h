@@ -72,12 +72,5 @@ typedef enum
   STM_PERIPHERAL_SPI5 = STM_PERIPHERAL_APB2 + 20
 } stm_peripheral_e;
 
-typedef struct
-{
-  stm_peripheral_e peripheral;
-  stm_peripheral__bus_e bus;
-  bool is_on_low_power_mode;
-} stm_peripheral_s;
-
-bool stm_peripheral__power_on_peripheral(stm_peripheral_s * const peripheral);
-bool stm_peripheral__is_powered_on(stm_peripheral_s * const peripheral);
+bool stm_peripheral__power_on_peripheral(stm_peripheral_e peripheral, bool low_power_mode);
+bool stm_peripheral__is_powered_on(stm_peripheral_e peripheral, bool low_power_mode);

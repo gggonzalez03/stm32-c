@@ -9,7 +9,7 @@ FINAL_BINARY := final_binary.bin
 FINAL_ELF := final_elf.elf
 MARCH = cortex-m4
 LINKER_FILE := l0_lowlevel/linker/stm32f411ceux_linker.ld
-OPTIMIZATION = 0
+OPTIMIZATION = 2
 CFLAGS = -c -mcpu=$(MARCH) -mthumb -mfloat-abi=softfp -std=gnu11 -Wall -O$(OPTIMIZATION)
 LDFLAGS = -mcpu=$(MARCH) -mthumb -mfloat-abi=softfp --specs=nano.specs -T $(LINKER_FILE) -Wl,-Map=${BUILD_DIR}/final.map
 
