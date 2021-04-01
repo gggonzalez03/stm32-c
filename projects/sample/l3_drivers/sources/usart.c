@@ -6,11 +6,13 @@
 #include "stm_peripherals.h"
 
 typedef USART_TypeDef usart_td;
+typedef IRQn_Type irq_number_td;
 
 typedef struct
 {
   stm_peripheral_e usart;
   usart_td *registers;
+  irq_number_td irq_number;
   bool low_power_mode;
 } usart_s;
 
@@ -21,9 +23,9 @@ typedef struct
  *************************************************************************/
 
 static const usart_s usarts[] = {
-  { STM_PERIPHERAL_USART1, USART1 },
-  { STM_PERIPHERAL_USART2, USART2 },
-  { STM_PERIPHERAL_USART6, USART6 }
+  { STM_PERIPHERAL_USART1, USART1, USART1_IRQn },
+  { STM_PERIPHERAL_USART2, USART2, USART2_IRQn },
+  { STM_PERIPHERAL_USART6, USART6, USART6_IRQn }
 };
 
  /*************************************************************************
@@ -95,4 +97,24 @@ bool usart__polled_transmit(usart_e usart_id, char byte)
   while (!(usart.registers->SR & (1UL << 6)));
 
   return true;
+}
+
+void usart__enable_rx_interrrupt(usart_e usart_id)
+{
+  usart_s usart = usarts[usart_id];
+
+  uint32_t rx_interrupt_enable = (1UL << 5);
+
+  usart.registers->CR1 |= rx_interrupt_enable;
+  NVIC_EnableIRQ(usart.irq_number);
+}
+
+void usart__enable_tx_interrrupt(usart_e usart_id)
+{
+  usart_s usart = usarts[usart_id];
+
+  uint32_t tx_interrupt_enable = (1UL << 7);
+
+  usart.registers->CR1 |= tx_interrupt_enable;
+  NVIC_EnableIRQ(usart.irq_number);
 }

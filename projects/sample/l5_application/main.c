@@ -59,8 +59,6 @@ void led_receiver_task(void* parameter)
     if (xSemaphoreTake(message, portMAX_DELAY))
     {
       gpio__toggle(gpio);
-      usart__polled_transmit(USART__1, a);
-      usart__polled_transmit(USART__2, b);
     }
   }
 }
@@ -71,6 +69,7 @@ static void config_usart_1()
   (void)gpio__configure_with_function(GPIO__PORT_A, 9, GPIO__AF07);
   (void)gpio__configure_with_function(GPIO__PORT_A, 10, GPIO__AF07);
   usart__init(USART__1, clock__get_core_clock_frq(), 38400, false);
+  usart__enable_rx_interrrupt(USART__1);
 }
 
 static void config_usart_2()
@@ -79,4 +78,12 @@ static void config_usart_2()
   (void)gpio__configure_with_function(GPIO__PORT_A, 2, GPIO__AF07);
   (void)gpio__configure_with_function(GPIO__PORT_A, 3, GPIO__AF07);
   usart__init(USART__2, clock__get_core_clock_frq() / 2, 115200, false);
+}
+
+void USART1_IRQHandler(void)
+{
+  if (USART1->SR & USART_SR_RXNE)
+  {
+    USART1->DR = USART1->DR;
+  }
 }
