@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -16,10 +18,10 @@ void vApplicationTickHook( void )
 
 void vApplicationMallocFailedHook( void )
 {
-  ;
+  printf("Malloc failed\n");
 }
 
 void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
 {
-  ;
+  printf("Stack Overflow\n");
 }

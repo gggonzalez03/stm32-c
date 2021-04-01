@@ -14,6 +14,8 @@ __top_sram_128k = __base_sram_128k + LENGTH(sram_128k);
 
 __base_stack = __top_sram_128k;
 
+__heap_size = 32k;
+
 SECTIONS
 {
   .text : ALIGN(4)
@@ -45,5 +47,6 @@ SECTIONS
     . = ALIGN(4);
     __end__ = .;
     __heap_start__ = __end__;
+    __heap_end__ = __end__ + __heap_size;
   } > sram_128k
 }

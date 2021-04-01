@@ -2,9 +2,21 @@
 
 #include "stm32f411xe.h"
 
+#include "stm_peripherals.h"
 #include "FreeRTOS.h"
 #include "clock.h"
 #include "flash.h"
+#include "usart.h"
+#include "gpio.h"
+
+static void startup__init_usart1(void)
+{
+  stm_peripheral__power_on_peripheral(STM_PERIPHERAL_GPIOA, false);
+  (void)gpio__configure_with_function(GPIO__PORT_A, 9, GPIO__AF07);
+  (void)gpio__configure_with_function(GPIO__PORT_A, 10, GPIO__AF07);
+
+  usart__init(USART__1, clock__get_core_clock_frq(), 115200, false);
+}
 
 void startup__init_data_sram(void)
 {
@@ -81,4 +93,5 @@ void startup__init_system(void)
    ****************************************************************/
   startup__init_fpu();
   startup__init_interrupts();
+  startup__init_usart1();
 }
