@@ -1,8 +1,10 @@
 #include <stdint.h>
 
-#include "FreeRTOS.h"
-
 #include "stm32f411xe.h"
+
+#include "FreeRTOS.h"
+#include "clock.h"
+#include "flash.h"
 
 void startup__init_data_sram(void)
 {
@@ -54,4 +56,29 @@ void startup__init_interrupts(void)
   {
     NVIC_SetPriority(peripheral, peripheral_interrupt_priority);
   }
+}
+
+void startup__init_system(void)
+{
+  /*****************************************************************
+   * These two lines are required
+   ****************************************************************/
+  startup__init_data_sram();
+  startup__init_bss_sram();
+
+  /*****************************************************************
+   * These two lines can be removed, but clock__get_core_clock_frq()
+   * from the clock.c file should be modified to reflect
+   * the default clock frequency. Note that if one of them is
+   * removed, the other should removed as well
+   ****************************************************************/
+  flash__config_3v_frq_64_90MHz();
+  clock__init_system_clock();
+
+  /*****************************************************************
+   * These are really optional, one could also add
+   * some more function calls here from other modules
+   ****************************************************************/
+  startup__init_fpu();
+  startup__init_interrupts();
 }

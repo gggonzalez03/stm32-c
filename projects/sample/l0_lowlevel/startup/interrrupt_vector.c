@@ -1,8 +1,6 @@
 #include <stdint.h>
 
 #include "startup.h"
-#include "clock.h"
-#include "flash.h"
 
 extern void main(void);
 
@@ -184,14 +182,7 @@ void* interrupt_vector_table[] __attribute__((section(".interrupt_vector_table")
 };
 
 void Reset_Handler(void) {
-  startup__init_data_sram();
-  startup__init_bss_sram();
-  startup__init_fpu();
-  startup__init_interrupts();
-  
-  flash__config_3v_frq_64_90MHz();
-  clock__init_system_clock();
-  
+  startup__init_system();
   main();
 }
 
