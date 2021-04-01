@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+#include "FreeRTOS.h"
+
 #include "stm32f411xe.h"
 #include "clock.h"
 #include "flash.h"
@@ -184,8 +186,30 @@ void* interrupt_vector_table[] __attribute__((section(".interrupt_vector_table")
 };
 
 // See Chapter 4.6.6 of the Programmer's Manual
-static void startup__init_fpu(void) {
+static void startup__init_fpu(void)
+{
   SCB->CPACR |= (0xF << 20);
+}
+
+static void startup__init_interrupts(void)
+{
+  /**
+   * Set all peripherals' priorities to lower than configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY
+   * from the FreeRTOSConfig.h. Any interrupt that has a higher priority than that cannot use 
+   * FreeRTOS API, not even the FromISRs.
+   * 
+   * Note that lower priority means numerically higher number.
+   * TODO: Test if the +1 could be removed here.
+   **/
+  const uint32_t peripheral_interrupt_priority = configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1;
+
+  const int32_t first_peripheral = (int32_t)WWDG_IRQn;
+  const int32_t last_peripheral = (int32_t)SPI5_IRQn;
+
+  for (int32_t peripheral = first_peripheral; peripheral <= last_peripheral; peripheral++)
+  {
+    NVIC_SetPriority(peripheral, peripheral_interrupt_priority);
+  }
 }
 
 static void startup__init_data_sram(void) {
@@ -215,6 +239,7 @@ void Reset_Handler(void) {
   startup__init_data_sram();
   startup__init_bss_sram();
   startup__init_fpu();
+  startup__init_interrupts();
   
   flash__config_3v_frq_64_90MHz();
   clock__init_system_clock();
