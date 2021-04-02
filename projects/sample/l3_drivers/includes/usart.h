@@ -20,10 +20,10 @@ typedef enum
  * @param usart_id is the USART peripheral to initialize
  * @param peripheral_clock is the clock frequency in Hz that is fed into the USART
  * @param baud_rate is the desire baud rate
- * @param low_power_mode whether to turn on usart in low power mode or not
+ * @param power_off_on_sleep whether to turn off the usart when in sleep mode or not
  * @return whether init is successful or not
  **/
-bool usart__init(usart_e usart_id, uint32_t peripheral_clock, uint32_t baud_rate, bool low_power_mode);
+bool usart__init(usart_e usart_id, uint32_t peripheral_clock, uint32_t baud_rate, bool power_off_on_sleep);
 
 /**
  * Receive a character from the USART in blocking mode

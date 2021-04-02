@@ -13,7 +13,7 @@ typedef struct
   stm_peripheral_e usart;
   usart_td *registers;
   irq_number_td irq_number;
-  bool low_power_mode;
+  bool power_off_on_sleep;
 } usart_s;
 
 /*************************************************************************
@@ -47,10 +47,10 @@ static const usart_s usarts[] = {
  *
  *************************************************************************/
 
-bool usart__init(usart_e usart_id, uint32_t peripheral_clock, uint32_t baud_rate, bool low_power_mode)
+bool usart__init(usart_e usart_id, uint32_t peripheral_clock, uint32_t baud_rate, bool power_off_on_sleep)
 {
   usart_s usart = usarts[usart_id];
-  stm_peripheral__power_on_peripheral(usart.usart, low_power_mode);
+  stm_peripheral__power_on_peripheral(usart.usart, power_off_on_sleep);
 
   uint32_t receiver_enable = (1UL << 2);
   uint32_t transmitter_enable = (1UL << 3);

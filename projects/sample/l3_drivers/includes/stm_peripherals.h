@@ -72,5 +72,6 @@ typedef enum
   STM_PERIPHERAL_SPI5 = STM_PERIPHERAL_APB2 + 20
 } stm_peripheral_e;
 
-bool stm_peripheral__power_on_peripheral(stm_peripheral_e peripheral, bool low_power_mode);
-bool stm_peripheral__is_powered_on(stm_peripheral_e peripheral, bool low_power_mode);
+bool stm_peripheral__power_on_peripheral(stm_peripheral_e peripheral, bool power_off_on_sleep);
+bool stm_peripheral__is_powered_on(stm_peripheral_e peripheral);
+bool stm_peripheral__is_powered_on_in_sleep_mode(stm_peripheral_e peripheral);
