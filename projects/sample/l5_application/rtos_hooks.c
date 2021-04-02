@@ -7,8 +7,13 @@
 
 void vApplicationIdleHook( void )
 {
-  // sleep here
-  ;
+  /**
+   * Peripherals that are allowed to be off will automatically turn off
+   * This is determined by two registers in STM32F411: AHBxLPENRR and APBxLPENR
+   * where x is the bus number.
+   * See Chapter 5.3.2 of the Reference Manual
+   **/
+  __asm__("WFI");
 }
 
 void vApplicationTickHook( void )

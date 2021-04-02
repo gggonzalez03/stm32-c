@@ -4,7 +4,7 @@
 #include "stm32f411xe.h"
 #include "stm_peripherals.h"
 
-static uint32_t stm_peripheral__get_bus(stm_peripheral_e peripheral)
+static stm_peripheral__bus_e stm_peripheral__get_bus(stm_peripheral_e peripheral)
 {
   if ((stm_peripheral__bus_e)peripheral >= STM_PERIPHERAL_APB2)
   {
@@ -28,7 +28,7 @@ static uint32_t stm_peripheral__get_bus(stm_peripheral_e peripheral)
 
 bool stm_peripheral__power_on_peripheral(stm_peripheral_e peripheral, bool power_off_on_sleep)
 {
-  uint32_t peripheral_bus = stm_peripheral__get_bus(peripheral);
+  stm_peripheral__bus_e peripheral_bus = stm_peripheral__get_bus(peripheral);
   uint32_t power_on_bit = peripheral - peripheral_bus;
   uint32_t* bus_power_register;
   uint32_t* bus_low_power_register;
@@ -69,15 +69,15 @@ bool stm_peripheral__power_on_peripheral(stm_peripheral_e peripheral, bool power
   if (bus_low_power_register != NULL)
   {
     // Clear the bit to disable peripheral clock (See Chapter 5.3.2 of the Reference Manual)
-    *bus_low_power_register &= (1UL << power_on_bit);
+    *bus_low_power_register &= ~(1UL << power_on_bit);
   }
 
-  return false;
+  return true;
 }
 
 bool stm_peripheral__is_powered_on(stm_peripheral_e peripheral)
 {
-  uint32_t peripheral_bus = stm_peripheral__get_bus(peripheral);
+  stm_peripheral__bus_e peripheral_bus = stm_peripheral__get_bus(peripheral);
   uint32_t power_on_bit = peripheral - peripheral_bus;
   uint32_t* bus_power_register;
 
@@ -109,7 +109,7 @@ bool stm_peripheral__is_powered_on(stm_peripheral_e peripheral)
 
 bool stm_peripheral__is_powered_on_in_sleep_mode(stm_peripheral_e peripheral)
 {
-  uint32_t peripheral_bus = stm_peripheral__get_bus(peripheral);
+  stm_peripheral__bus_e peripheral_bus = stm_peripheral__get_bus(peripheral);
   uint32_t power_on_bit = peripheral - peripheral_bus;
   uint32_t* bus_low_power_register;
 
