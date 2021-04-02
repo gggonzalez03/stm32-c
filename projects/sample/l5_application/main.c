@@ -14,19 +14,15 @@
 
 static SemaphoreHandle_t message;
 
-static void config_usart_1();
-static void config_usart_2();
-
 void led_sender_task(void* parameter);
 void led_receiver_task(void* parameter);
 
 int main()
 {
-
   message = xSemaphoreCreateBinary();
 
-  xTaskCreate(led_sender_task, "led sender task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
-  xTaskCreate(led_receiver_task, "led receiver task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+  xTaskCreate(led_sender_task, "sender", 512 / sizeof(void *), NULL, 1, NULL);
+  xTaskCreate(led_receiver_task, "receiver", 1024 / sizeof(void *), NULL, 1, NULL);
 
   vTaskStartScheduler();
 
@@ -48,36 +44,14 @@ void led_receiver_task(void* parameter)
   stm_peripheral__power_on_peripheral(STM_PERIPHERAL_GPIOC, false);
   gpio__gpio_s gpio = gpio__configure_as_output(GPIO__PORT_C, led_0);
   
-  config_usart_1();
-  config_usart_2();
-
-  char a = 'A';
-  char b = 'B';
-  
   while (1)
   {
     if (xSemaphoreTake(message, portMAX_DELAY))
     {
+      printf("Toggling LED\n");
       gpio__toggle(gpio);
     }
   }
-}
-
-static void config_usart_1()
-{
-  stm_peripheral__power_on_peripheral(STM_PERIPHERAL_GPIOA, false);
-  (void)gpio__configure_with_function(GPIO__PORT_A, 9, GPIO__AF07);
-  (void)gpio__configure_with_function(GPIO__PORT_A, 10, GPIO__AF07);
-  usart__init(USART__1, clock__get_core_clock_frq(), 38400, false);
-  usart__enable_rx_interrrupt(USART__1);
-}
-
-static void config_usart_2()
-{
-  stm_peripheral__power_on_peripheral(STM_PERIPHERAL_GPIOA, false);
-  (void)gpio__configure_with_function(GPIO__PORT_A, 2, GPIO__AF07);
-  (void)gpio__configure_with_function(GPIO__PORT_A, 3, GPIO__AF07);
-  usart__init(USART__2, clock__get_core_clock_frq() / 2, 115200, false);
 }
 
 void USART1_IRQHandler(void)
