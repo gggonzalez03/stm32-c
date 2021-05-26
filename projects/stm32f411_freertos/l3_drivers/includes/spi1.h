@@ -15,15 +15,16 @@ void spi1__init(uint32_t max_clock_hz);
 void spi1__set_max_clock(uint32_t max_clock_hz);
 
 /**
- * Transmit and receive a byte
- * @param tx_byte is the byte to be transmitted
- * @return rx_byte is the received byte
- **/
-uint8_t spi1__exchange_byte(uint8_t tx_byte);
-
-/**
  * Transmit multiple bytes over SPI1
  * @param bytes is the address of the first byte
  * @param count is the number of bytes to transfer
- **/ 
-void spi2__transmit_bytes(uint8_t *bytes, uint32_t count);
+ **/
+void spi1__transmit_bytes(uint8_t *bytes, uint32_t count);
+
+/**
+ * Transmit and receive bytes over SPI1
+ * @param tx_bytes address of the first byte to transmit
+ * @param tx_bytes address of the first memory location to store bytes into
+ * @param count number of bytes to transfer and receive
+ **/
+void spi1__transmit_receive_bytes(uint8_t *tx_bytes, uint8_t *rx_bytes, uint32_t count);
