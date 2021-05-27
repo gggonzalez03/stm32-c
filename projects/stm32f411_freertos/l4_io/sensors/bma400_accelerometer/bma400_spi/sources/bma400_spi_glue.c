@@ -1,5 +1,8 @@
 #include "bma400_spi_glue.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "stm_peripherals.h"
 #include "gpio.h"
 #include "spi1.h"
@@ -47,4 +50,11 @@ void bma400_spi__transmit_receive_bytes(uint8_t *tx_bytes, uint8_t *rx_bytes, ui
   spi1__transmit_receive_bytes(tx_bytes, rx_bytes, count, true);
 }
 
-void bma400_spi__delay_ms(uint32_t ms);
+void bma400_spi__delay_ms(uint32_t ms)
+{
+  /**
+   * TODO:
+   * 1. Use a hardware timer instead if FreeRTOS is not running
+   **/
+  vTaskDelay(ms);
+}
