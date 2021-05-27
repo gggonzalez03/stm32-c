@@ -118,6 +118,18 @@ void spi1__set_max_clock(uint32_t max_clock_hz)
   SPI1->CR1 |= baud_rate_control_reg_val;
 }
 
+uint8_t spi1__exchange_byte(uint8_t tx_byte, bool is_last_byte)
+{
+  uint8_t rx_byte;
+  bool should_spi_turrn_off;
+
+  should_spi_turrn_off = is_last_byte;
+
+  spi1__transmit_receive_bytes(&tx_byte, &rx_byte, 1, should_spi_turrn_off);
+
+  return rx_byte;
+}
+
 void spi1__transmit_bytes(uint8_t *bytes, uint32_t count)
 {
   spi1__enable();
@@ -136,7 +148,7 @@ void spi1__transmit_bytes(uint8_t *bytes, uint32_t count)
  * This code follows the procedures outlined in Chapter 20.3.5 under the section
  * "Handling data transmission and reception" on page 572
  **/
-void spi1__transmit_receive_bytes(uint8_t *tx_bytes, uint8_t *rx_bytes, uint32_t count)
+void spi1__transmit_receive_bytes(uint8_t *tx_bytes, uint8_t *rx_bytes, uint32_t count, bool spi_off_after_tx)
 {
   uint32_t tx_index = 0;
   uint32_t rx_index = 0;
@@ -171,6 +183,10 @@ void spi1__transmit_receive_bytes(uint8_t *tx_bytes, uint8_t *rx_bytes, uint32_t
   spi1__wait_until_tx_buffer_empty();
   // Step 5b: Wait until BSY = 0
   spi1__wait_while_busy();
-  // Step 5c: Disable SPI
-  spi1__disable();
+
+  if (spi_off_after_tx)
+  {
+    // Step 5c: Disable SPI
+    spi1__disable();
+  }
 }
