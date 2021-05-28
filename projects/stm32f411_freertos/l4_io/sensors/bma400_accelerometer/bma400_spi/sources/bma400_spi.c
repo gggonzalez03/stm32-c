@@ -48,11 +48,11 @@ static void bma400_spi__normal_mode(void)
 
 static void bma400_spi__range_2g_osr_high_odr_100Hz(void)
 {
-  const uint8_t acc_config1_reg = 0x19;
+  const uint8_t acc_config1_reg = 0x1A;
   const uint8_t range_2g = 0x00;
   const uint8_t oversampling_rate_highest = 0x03;
   const uint8_t output_data_rate_100Hz = 0x08;
-  const uint8_t all_configs = range_2g | oversampling_rate_highest | output_data_rate_100Hz;
+  const uint8_t all_configs = (range_2g << 6) | (oversampling_rate_highest << 4) | (output_data_rate_100Hz << 0);
 
   bma400_spi__write_to_register(acc_config1_reg, all_configs);
 }
@@ -60,9 +60,9 @@ static void bma400_spi__range_2g_osr_high_odr_100Hz(void)
 static void bma400_spi__fixed_odr_filter_100Hz(void)
 {
   uint8_t acc_config2_reg = 0x1B;
-  uint8_t odr_filter_fixed_100Hz = 0x04;
+  uint8_t odr_filter_fixed_100Hz = 0x01;
 
-  bma400_spi__write_to_register(acc_config2_reg, odr_filter_fixed_100Hz);
+  bma400_spi__write_to_register(acc_config2_reg, odr_filter_fixed_100Hz << 2);
 }
 
 static void bma_400__enable_data_ready_interrupt(void)
@@ -168,11 +168,11 @@ bma400_spi__axes_raw_s bma400_spi__get_acceleration_raw(void)
   bma400_spi__transmit_receive_bytes(tx_bytes, xyz_bytes, byte_count);
   bma400_spi__ds();
 
-  xyz_raw.x = (int16_t)xyz_bytes[3] << 8 | xyz_bytes[2];
+  xyz_raw.x = (int16_t)((xyz_bytes[3] & 0x0F) << 8) | xyz_bytes[2];
   bma400_spi__get_negative(&xyz_raw.x);
-  xyz_raw.y = (int16_t)xyz_bytes[5] << 8 | xyz_bytes[4];
+  xyz_raw.y = (int16_t)((xyz_bytes[5] & 0x0F) << 8) | xyz_bytes[4];
   bma400_spi__get_negative(&xyz_raw.y);
-  xyz_raw.z = (int16_t)xyz_bytes[7] << 8 | xyz_bytes[6];
+  xyz_raw.z = (int16_t)((xyz_bytes[7] & 0x0F) << 8) | xyz_bytes[6];
   bma400_spi__get_negative(&xyz_raw.z);
 
   return xyz_raw;
@@ -188,7 +188,7 @@ bma400_spi__axes_mps2_s bma400_spi__get_acceleration_mps2(void)
   bma400_spi__axes_raw_s xyz_raw = bma400_spi__get_acceleration_raw();
   bma400_spi__axes_mps2_s xyz_mps2;
 
-  half_scale = 1 << (bit_width - 2);
+  half_scale = 1 << (bit_width - 1);
 
   xyz_mps2.x = (earth_gravity * xyz_raw.x * g_range) / half_scale;
   xyz_mps2.y = (earth_gravity * xyz_raw.y * g_range) / half_scale;
