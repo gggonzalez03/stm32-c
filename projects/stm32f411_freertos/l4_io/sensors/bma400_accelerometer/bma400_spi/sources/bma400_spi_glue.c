@@ -12,6 +12,7 @@
  * 1. Use a mutex to protect the SPI1 bus
  **/
 
+static const gpio__gpio_s interrupt1_pin = {GPIO__PORT_A, 3};
 static const gpio__gpio_s cs_pin = {GPIO__PORT_A, 4};
 static const gpio__gpio_s clk_pin = {GPIO__PORT_A, 5};
 static const gpio__gpio_s miso_pin = {GPIO__PORT_A, 6};
@@ -21,11 +22,16 @@ void bma400_spi__configure_spi(uint32_t spi_clock_hz)
 {
   stm_peripheral__power_on_peripheral(STM_PERIPHERAL_SPI1, false);
   stm_peripheral__power_on_peripheral(STM_PERIPHERAL_GPIOA, false);
+  stm_peripheral__power_on_peripheral(STM_PERIPHERAL_SYSCFG, false);
 
   gpio__set_as_output(cs_pin);
   gpio__configure_with_function(clk_pin.port, clk_pin.pin, GPIO__AF05);
   gpio__configure_with_function(miso_pin.port, miso_pin.pin, GPIO__AF05);
   gpio__configure_with_function(mosi_pin.port, mosi_pin.pin, GPIO__AF05);
+
+  gpio__set_as_input(interrupt1_pin);
+  gpio__enable_pull_down_resistor(interrupt1_pin);
+  gpio__enable_interrupt(interrupt1_pin, GPIO__RISING_EDGE);
 
   spi1__init(2 * 1000 * 1000);
 }

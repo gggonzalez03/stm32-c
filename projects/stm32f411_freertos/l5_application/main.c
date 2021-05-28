@@ -3,11 +3,7 @@
 #include <stdbool.h>
 
 #include "stm32f411xe.h"
-
-#include "stm_peripherals.h"
-#include "clock.h"
-#include "gpio.h"
-#include "usart.h"
+#include "exti.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -15,49 +11,48 @@
 
 #include "bma400_spi.h"
 
-static SemaphoreHandle_t message;
+void accelerometer_task(void *parameter);
 
-void led_sender_task(void *parameter);
-void led_receiver_task(void *parameter);
+SemaphoreHandle_t data_ready;
 
 int main()
 {
-  message = xSemaphoreCreateBinary();
+  data_ready = xSemaphoreCreateBinary();;
 
-  xTaskCreate(led_sender_task, "sender", 512 / sizeof(void *), NULL, 1, NULL);
-  xTaskCreate(led_receiver_task, "receiver", 1024 / sizeof(void *), NULL, 1, NULL);
+  xTaskCreate(accelerometer_task, "bma400 acc", 1024 / sizeof(void *), NULL, 1, NULL);
 
   vTaskStartScheduler();
 
   return 0;
 }
 
-void led_sender_task(void *parameter)
+void accelerometer_task(void *parameter)
 {
-  while (1)
-  {
-    xSemaphoreGive(message);
-    vTaskDelay(300);
-  }
-}
+  bma400_spi__axes_raw_s xyz_raw;
+  bma400_spi__axes_mps2_s xyz_mps2;
+  float x;
 
-void led_receiver_task(void *parameter)
-{
   bool bma_ok = bma400_spi__init();
 
   while (1)
   {
-    if (xSemaphoreTake(message, portMAX_DELAY))
+    if (!bma_ok)
     {
-      if (bma_ok)
-      {
-        printf("BMA400 initialized successfully.\n");
-      }
-      else
-      {
-        printf("BMA400 initialization failed.\n");
-      }
+      printf("BMA400 initialization failed.\n");
+      break;
     }
+
+    if (xSemaphoreTake(data_ready, portMAX_DELAY))
+    {
+      xyz_mps2 = bma400_spi__get_acceleration_mps2();
+      printf("x: %f, y: %f, z: %f\n", xyz_mps2.x, xyz_mps2.y, xyz_mps2.z);
+    }
+    else
+    {
+      printf("Data not ready.\n");
+    }
+
+    vTaskDelay(100);
   }
 }
 
@@ -67,4 +62,10 @@ void USART1_IRQHandler(void)
   {
     USART1->DR = USART1->DR;
   }
+}
+
+void EXTI3_IRQHandler(void)
+{
+  xSemaphoreGiveFromISR(data_ready, NULL);
+  exti__clear_external_interrupt(3);
 }
