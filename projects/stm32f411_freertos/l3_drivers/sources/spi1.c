@@ -46,6 +46,32 @@ static void spi1__wait_until_rx_buffer_full(void)
     ;
 }
 
+static void spi1__write_data_register(uint8_t *tx_byte, uint32_t tx_index)
+{
+  spi1__wait_until_tx_buffer_empty();
+  if (tx_byte == NULL)
+  {
+    SPI1->DR = 0xFF;
+  }
+  else
+  {
+    SPI1->DR = tx_byte[tx_index];
+  }
+}
+
+static void spi1__read_data_register(uint8_t *rx_byte, uint32_t rx_index)
+{
+  spi1__wait_until_rx_buffer_full();
+  if (rx_byte == NULL)
+  {
+    (void)SPI1->DR;
+  }
+  else
+  {
+    rx_byte[rx_index] = SPI1->DR;
+  }
+}
+
 static void spi1__enable(void)
 {
   const uint32_t spi_enable = (1UL << 6);
@@ -118,30 +144,23 @@ void spi1__set_max_clock(uint32_t max_clock_hz)
   SPI1->CR1 |= baud_rate_control_reg_val;
 }
 
-uint8_t spi1__exchange_byte(uint8_t tx_byte, bool is_last_byte)
+uint8_t spi1__exchange_byte(uint8_t tx_byte, bool spi_off_after_tx)
 {
   uint8_t rx_byte;
-  bool should_spi_turrn_off;
 
-  should_spi_turrn_off = is_last_byte;
-
-  spi1__transmit_receive_bytes(&tx_byte, &rx_byte, 1, should_spi_turrn_off);
+  spi1__transmit_receive_bytes(&tx_byte, &rx_byte, 1, spi_off_after_tx);
 
   return rx_byte;
 }
 
-void spi1__transmit_bytes(uint8_t *bytes, uint32_t count)
+void spi1__transmit_bytes(uint8_t *tx_bytes, uint32_t count, bool spi_off_after_tx)
 {
-  spi1__enable();
+  spi1__transmit_receive_bytes(tx_bytes, NULL, count, spi_off_after_tx);
+}
 
-  for (uint32_t current_byte = 0; current_byte < count; current_byte++)
-  {
-    SPI1->DR = bytes[current_byte] & 0xFF;
-    spi1__wait_until_tx_buffer_empty();
-  }
-
-  spi1__wait_while_busy();
-  spi1__disable();
+void spi1__receive_bytes(uint8_t *rx_bytes, uint32_t count, bool spi_off_after_tx)
+{
+  spi1__transmit_receive_bytes(NULL, rx_bytes, count, spi_off_after_tx);
 }
 
 /**
@@ -156,28 +175,20 @@ void spi1__transmit_receive_bytes(uint8_t *tx_bytes, uint8_t *rx_bytes, uint32_t
   // Step 1: Enable SPI
   spi1__enable();
 
-  if (tx_bytes == NULL || rx_bytes == NULL || count == 0)
-  {
-    return;
-  }
-
   // Step 2: Transmit the first byte
-  SPI1->DR = tx_bytes[tx_index++] & 0xFF;
+  spi1__write_data_register(tx_bytes, tx_index++);
 
   while (--count > 0)
   {
     // Step 3a: Wait until TXE = 1 and write the second byte
-    spi1__wait_until_tx_buffer_empty();
-    SPI1->DR = tx_bytes[tx_index++] & 0xFF;
+    spi1__write_data_register(tx_bytes, tx_index++);
 
     // Step 3b: Wait until RXE = 1 and read the received byte
-    spi1__wait_until_rx_buffer_full();
-    rx_bytes[rx_index++] = SPI1->DR;
+    spi1__read_data_register(rx_bytes, rx_index++);
   }
 
   // Step 4: Wait until RXE = 1 and read the last received byte
-  spi1__wait_until_rx_buffer_full();
-  rx_bytes[rx_index++] = SPI1->DR;
+  spi1__read_data_register(rx_bytes, rx_index++);
 
   // Step 5a: Wait until TXE = 1
   spi1__wait_until_tx_buffer_empty();

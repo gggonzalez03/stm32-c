@@ -18,17 +18,26 @@ void spi1__set_max_clock(uint32_t max_clock_hz);
 /**
  * Exchange single byte. Transmit one and receive one.
  * @param tx_byte the byte to transmit
- * @param is_last_byte whether or not the byte to transmit is the last byte
+ * @param spi_off_after_tx whether or not spi should be turned off to save power after transmission
  * @return received byte
  **/
-uint8_t spi1__exchange_byte(uint8_t tx_byte, bool is_last_byte);
+uint8_t spi1__exchange_byte(uint8_t tx_byte, bool spi_off_after_tx);
 
 /**
  * Transmit multiple bytes over SPI1
- * @param bytes is the address of the first byte
+ * @param tx_bytes is the address of the first byte
  * @param count is the number of bytes to transfer
+ * @param spi_off_after_tx whether or not spi should be turned off to save power after transmission
  **/
-void spi1__transmit_bytes(uint8_t *bytes, uint32_t count);
+void spi1__transmit_bytes(uint8_t *tx_bytes, uint32_t count, bool spi_off_after_tx);
+
+/**
+ * Receive multiple bytes over SPI1
+ * @param bytes is the address of the first location in the rx buffer
+ * @param count is the number of bytes to receive
+ * @param spi_off_after_tx whether or not spi should be turned off to save power after transmission
+ **/
+void spi1__receive_bytes(uint8_t *rx_bytes, uint32_t count, bool spi_off_after_tx);
 
 /**
  * Transmit and receive bytes over SPI1
