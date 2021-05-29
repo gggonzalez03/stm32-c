@@ -27,4 +27,18 @@ uint8_t bma400_spi__exchange_byte(uint8_t tx_byte, bool is_last_byte);
  **/
 void bma400_spi__transmit_receive_bytes(uint8_t *tx_bytes, uint8_t *rx_bytes, uint32_t count);
 
+/**
+ * Transmit multiple bytes
+ * @param tx_bytes pointer to the first byte of a buffer
+ * @param count number of bytes to transmit
+ **/ 
+void bma400_spi__transmit_bytes(uint8_t *tx_bytes, uint32_t count);
+
+/**
+ * Receive multiple bytes
+ * @param tx_bytes pointer to the first memory location of a buffer
+ * @param count number of bytes to receive
+ **/ 
+void bma400_spi__receive_bytes(uint8_t *rx_bytes, uint32_t count);
+
 void bma400_spi__delay_ms(uint32_t ms);

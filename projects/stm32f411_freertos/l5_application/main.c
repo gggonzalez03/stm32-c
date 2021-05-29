@@ -30,7 +30,7 @@ void accelerometer_task(void *parameter)
 {
   bma400_spi__axes_raw_s xyz_raw;
   bma400_spi__axes_mps2_s xyz_mps2;
-  float x;
+  float x, y, z;
 
   bool bma_ok = bma400_spi__init();
 
@@ -46,6 +46,12 @@ void accelerometer_task(void *parameter)
     {
       xyz_mps2 = bma400_spi__get_acceleration_mps2();
       printf("x: %f, y: %f, z: %f\n", xyz_mps2.x, xyz_mps2.y, xyz_mps2.z);
+
+      x = bma400_spi__get_x_mps2();
+      y = bma400_spi__get_y_mps2();
+      z = bma400_spi__get_z_mps2();
+
+      printf("x: %f, y: %f, z: %f\n", x, y, z);
     }
     else
     {

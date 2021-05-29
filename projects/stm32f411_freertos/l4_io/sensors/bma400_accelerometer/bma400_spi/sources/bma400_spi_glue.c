@@ -56,6 +56,16 @@ void bma400_spi__transmit_receive_bytes(uint8_t *tx_bytes, uint8_t *rx_bytes, ui
   spi1__transmit_receive_bytes(tx_bytes, rx_bytes, count, true);
 }
 
+void bma400_spi__transmit_bytes(uint8_t *tx_bytes, uint32_t count)
+{
+  spi1__transmit_bytes(tx_bytes, count, true);
+}
+
+void bma400_spi__receive_bytes(uint8_t *rx_bytes, uint32_t count)
+{
+  spi1__receive_bytes(rx_bytes, count, true);
+}
+
 void bma400_spi__delay_ms(uint32_t ms)
 {
   /**
