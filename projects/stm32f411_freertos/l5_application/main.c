@@ -1,56 +1,64 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "stm32f411xe.h"
-
-#include "stm_peripherals.h"
-#include "clock.h"
-#include "gpio.h"
-#include "usart.h"
+#include "exti.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
 
-static SemaphoreHandle_t message;
+#include "bma400_spi.h"
 
-void led_sender_task(void* parameter);
-void led_receiver_task(void* parameter);
+void accelerometer_task(void *parameter);
+
+SemaphoreHandle_t data_ready;
 
 int main()
 {
-  message = xSemaphoreCreateBinary();
+  data_ready = xSemaphoreCreateBinary();;
 
-  xTaskCreate(led_sender_task, "sender", 512 / sizeof(void *), NULL, 1, NULL);
-  xTaskCreate(led_receiver_task, "receiver", 1024 / sizeof(void *), NULL, 1, NULL);
+  xTaskCreate(accelerometer_task, "bma400 acc", 1024 / sizeof(void *), NULL, 1, NULL);
 
   vTaskStartScheduler();
 
   return 0;
 }
 
-void led_sender_task(void* parameter)
+void accelerometer_task(void *parameter)
 {
-  while (1)
-  {
-    xSemaphoreGive(message);
-    vTaskDelay(300);
-  }
-}
+  bma400_spi__axes_raw_s xyz_raw;
+  bma400_spi__axes_mps2_s xyz_mps2;
+  float x, y, z;
 
-void led_receiver_task(void* parameter)
-{
-  static uint8_t led_0 = 15;
-  stm_peripheral__power_on_peripheral(STM_PERIPHERAL_GPIOC, false);
-  gpio__gpio_s gpio = gpio__configure_as_output(GPIO__PORT_C, led_0);
-  
+  bool bma_ok = bma400_spi__init();
+
   while (1)
   {
-    if (xSemaphoreTake(message, portMAX_DELAY))
+    if (!bma_ok)
     {
-      printf("Toggling LED\n");
-      gpio__toggle(gpio);
+      printf("BMA400 initialization failed.\n");
+      break;
     }
+
+    if (xSemaphoreTake(data_ready, portMAX_DELAY))
+    {
+      xyz_mps2 = bma400_spi__get_acceleration_mps2();
+      printf("x: %f, y: %f, z: %f\n", xyz_mps2.x, xyz_mps2.y, xyz_mps2.z);
+
+      x = bma400_spi__get_x_mps2();
+      y = bma400_spi__get_y_mps2();
+      z = bma400_spi__get_z_mps2();
+
+      printf("x: %f, y: %f, z: %f\n", x, y, z);
+    }
+    else
+    {
+      printf("Data not ready.\n");
+    }
+
+    vTaskDelay(100);
   }
 }
 
@@ -60,4 +68,10 @@ void USART1_IRQHandler(void)
   {
     USART1->DR = USART1->DR;
   }
+}
+
+void EXTI3_IRQHandler(void)
+{
+  xSemaphoreGiveFromISR(data_ready, NULL);
+  exti__clear_external_interrupt(3);
 }
