@@ -10,6 +10,7 @@
 /**
  * TODO:
  * 1. Use a mutex to protect the SPI1 bus
+ * 2. Allow multiple chip selects
  **/
 
 static const gpio__gpio_s interrupt1_pin = {GPIO__PORT_A, 3};

@@ -39,19 +39,19 @@ static void bma400_spi__read_from_register(uint8_t reg, uint8_t *rx_bytes, uint3
 
 static void bma400_spi__normal_mode(void)
 {
-  const uint8_t acc_config0_reg = 0x19;
-  const uint8_t normal_mode = 0x02;
+  uint8_t acc_config0_reg = 0x19;
+  uint8_t normal_mode = 0x02;
 
   bma400_spi__write_to_register(acc_config0_reg, &normal_mode, 1);
 }
 
 static void bma400_spi__range_2g_osr_high_odr_100Hz(void)
 {
-  const uint8_t acc_config1_reg = 0x1A;
-  const uint8_t range_2g = 0x00;
-  const uint8_t oversampling_rate_highest = 0x03;
-  const uint8_t output_data_rate_100Hz = 0x08;
-  const uint8_t all_configs = (range_2g << 6) | (oversampling_rate_highest << 4) | (output_data_rate_100Hz << 0);
+  uint8_t acc_config1_reg = 0x1A;
+  uint8_t range_2g = 0x00;
+  uint8_t oversampling_rate_highest = 0x03;
+  uint8_t output_data_rate_100Hz = 0x08;
+  uint8_t all_configs = (range_2g << 6) | (oversampling_rate_highest << 4) | (output_data_rate_100Hz << 0);
 
   bma400_spi__write_to_register(acc_config1_reg, &all_configs, 1);
 }
@@ -66,16 +66,16 @@ static void bma400_spi__fixed_odr_filter_100Hz(void)
 
 static void bma_400__enable_data_ready_interrupt(void)
 {
-  const uint8_t int_config0 = 0x1F;
-  const uint8_t data_ready_int = 0x80;
+  uint8_t int_config0 = 0x1F;
+  uint8_t data_ready_int = 0x80;
 
   bma400_spi__write_to_register(int_config0, &data_ready_int, 1);
 }
 
 static void bma_400__map_data_ready_interrupt_to_int1_pin(void)
 {
-  const uint8_t int_config1 = 0x21;
-  const uint8_t data_ready_int1 = 0x80;
+  uint8_t int_config1 = 0x21;
+  uint8_t data_ready_int1 = 0x80;
 
   bma400_spi__write_to_register(int_config1, &data_ready_int1, 1);
 }

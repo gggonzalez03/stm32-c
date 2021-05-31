@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <stdio.h>
 #include <stdbool.h>
 
 #include "stm32f411xe.h"
@@ -10,6 +9,15 @@
 #include "semphr.h"
 
 #include "bma400_spi.h"
+
+#define DEBUG 1
+
+#if DEBUG
+#include <stdio.h>
+#define PRINTF(...) printf(__VA_ARGS__)
+#else
+#define PRINTF(...)
+#endif
 
 void accelerometer_task(void *parameter);
 
@@ -28,9 +36,7 @@ int main()
 
 void accelerometer_task(void *parameter)
 {
-  bma400_spi__axes_raw_s xyz_raw;
-  bma400_spi__axes_mps2_s xyz_mps2;
-  float x, y, z;
+  float z;
 
   bool bma_ok = bma400_spi__init();
 
@@ -38,24 +44,18 @@ void accelerometer_task(void *parameter)
   {
     if (!bma_ok)
     {
-      printf("BMA400 initialization failed.\n");
+      PRINTF("BMA400 initialization failed.\n");
       break;
     }
 
     if (xSemaphoreTake(data_ready, portMAX_DELAY))
     {
-      xyz_mps2 = bma400_spi__get_acceleration_mps2();
-      printf("x: %f, y: %f, z: %f\n", xyz_mps2.x, xyz_mps2.y, xyz_mps2.z);
-
-      x = bma400_spi__get_x_mps2();
-      y = bma400_spi__get_y_mps2();
       z = bma400_spi__get_z_mps2();
-
-      printf("x: %f, y: %f, z: %f\n", x, y, z);
+      PRINTF("z: %f\n", z);
     }
     else
     {
-      printf("Data not ready.\n");
+      PRINTF("Data not ready.\n");
     }
 
     vTaskDelay(100);
