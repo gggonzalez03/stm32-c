@@ -151,3 +151,8 @@ uint32_t clock__get_core_clock_frq()
 {
   return 84 * 1000 * 1000;
 }
+
+uint32_t clock__get_apb1_clock_frq(void)
+{
+  return clock__get_core_clock_frq() / 2;
+}
