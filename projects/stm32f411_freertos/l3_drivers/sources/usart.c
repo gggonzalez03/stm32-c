@@ -82,8 +82,9 @@ bool usart__init(usart_e usart_id, uint32_t peripheral_clock, uint32_t baud_rate
 bool usart__polled_receive(usart_e usart_id, char* const byte)
 {
   usart_s usart = usarts[usart_id];
+  uint32_t rx_register_full = (1UL << 5);
 
-  while (!(usart.registers->SR & (1UL << 5)));
+  while (!(usart.registers->SR & rx_register_full));
   *byte = (char)usart.registers->DR;
 
   return true;
@@ -92,9 +93,10 @@ bool usart__polled_receive(usart_e usart_id, char* const byte)
 bool usart__polled_transmit(usart_e usart_id, char byte)
 {
   usart_s usart = usarts[usart_id];
+  uint32_t tx_register_empty = (1UL << 7);
 
   usart.registers->DR = byte & 0xFF;
-  while (!(usart.registers->SR & (1UL << 6)));
+  while (!(usart.registers->SR & tx_register_empty));
 
   return true;
 }
