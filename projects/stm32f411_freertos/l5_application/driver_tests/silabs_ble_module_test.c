@@ -1,5 +1,3 @@
-
-
 /**
  * First, the BLE stack firmware has to be loaded into the EFR32MG12 (EFR32BG22 could be used as well, but
  * need testing and verification). The firmware is so that the device can act as network coprocessor to an
@@ -8,14 +6,14 @@
  * To load the firmware:
  * 1. Download, install, and open Simplicity Studio 5 from siliconlabs website
  * 2. If you have an evaluation board, such as Thunderboard Sense 2, plug that in.
- *    If not, you will need a USB to UART converter, or JTAG connector and figure out how to upload firware
+ *    If not, you will need a USB to UART converter, or JTAG connector and figure out how to upload firmware
  * 3. Create a new project
- * 4. Choose "Bluetooth - NCP Empty" example project
+ * 4. Choose "Bluetooth - NCP" example project
  * 5. Change the UART pins to use
  * 6. Upload firware to the device
  * 
  * You can verify that the module is working using the "Bluetooth NCP Commander" tool on the Simplicity Studio.
- * You can use a USB to UART converter for this to connect to the BLE device
+ * Use a USB to UART converter for this to connect to the BLE device
  * 
  * After this, the device can be used as a network coprocessor using siliconlab's bluetooth APIs
  **/
@@ -34,9 +32,11 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
 
 #include "sl_bt_api.h"
 #include "sl_bt_ncp_host.h"
+#include "gatt_database.h"
 
 typedef struct
 {
@@ -46,11 +46,20 @@ typedef struct
 
 volatile ble_buffer_t usart_rx_buffer;
 QueueHandle_t usart_rx_queue;
+xSemaphoreHandle rx_buffer_mutex;
+xSemaphoreHandle event_pending_semphr;
+
+static uint8_t advertising_set_handle = 0xff;
+bool connection_open = false;
+uint8_t connection = 0xFF;
 
 static void ncp_host_tx(uint32_t length, uint8_t *tx_bytes);
 static int32_t ncp_host_rx(uint32_t length, uint8_t *rx_buffer);
 static int32_t ncp_host_peek(void);
 static void sl_bt_on_event(sl_bt_msg_t *evt);
+
+static void system_id_changed_callback(uint8array *value);
+static void system_id_write();
 
 static void silabs_ble_module_test__configure(void)
 {
@@ -85,11 +94,12 @@ void silabs_ble_module_test__task(void *parameter)
 
   while (1)
   {
+
+    xSemaphoreTake(event_pending_semphr, portMAX_DELAY);
+
     status = sl_bt_pop_event(&evt);
     if (status != SL_STATUS_OK)
     {
-      // printf("Hello: %ld\n", status);
-      // vTaskDelay(2000);
       continue;
     }
 
@@ -102,17 +112,17 @@ void silabs_ble_module_test__rx_buffer_filler_task(void *parameter)
   uint8_t rx_byte;
 
   usart_rx_queue = xQueueCreate(1024, sizeof(uint8_t));
+  rx_buffer_mutex = xSemaphoreCreateMutex();
+  event_pending_semphr = xSemaphoreCreateBinary();
 
   while (1)
   {
     if (xQueueReceive(usart_rx_queue, &rx_byte, portMAX_DELAY))
     {
-      /**
-       * TODO:
-       * Add a mutex here
-       **/
+      xSemaphoreTake(rx_buffer_mutex, portMAX_DELAY);
       usart_rx_buffer.bytes[usart_rx_buffer.length] = rx_byte;
       usart_rx_buffer.length++;
+      xSemaphoreGive(rx_buffer_mutex);
     }
   }
 }
@@ -143,11 +153,103 @@ static void sl_bt_on_event(sl_bt_msg_t *evt)
              address.addr[1],
              address.addr[0]);
     }
+
+    // Pad and reverse unique ID to get System ID.
+    characteristics[SYSTEM_ID].value[0] = address.addr[5];
+    characteristics[SYSTEM_ID].value[1] = address.addr[4];
+    characteristics[SYSTEM_ID].value[2] = address.addr[3];
+    characteristics[SYSTEM_ID].value[3] = 0xFF;
+    characteristics[SYSTEM_ID].value[4] = 0xFE;
+    characteristics[SYSTEM_ID].value[5] = address.addr[2];
+    characteristics[SYSTEM_ID].value[6] = address.addr[1];
+    characteristics[SYSTEM_ID].value[7] = address.addr[0];
+
+    gatt_database__initialize();
+
+    ble_status = sl_bt_advertiser_create_set(&advertising_set_handle);
+    // Set advertising interval to 100ms.
+    ble_status = sl_bt_advertiser_set_timing(
+        advertising_set_handle,
+        160, // min. adv. interval (milliseconds * 1.6)
+        160, // max. adv. interval (milliseconds * 1.6)
+        0,   // adv. duration
+        0);  // max. num. adv. events
+    // Start general advertising and enable connections.
+    ble_status = sl_bt_advertiser_start(
+        advertising_set_handle,
+        sl_bt_advertiser_general_discoverable,
+        sl_bt_advertiser_connectable_scannable);
+
+    if (ble_status == SL_STATUS_OK)
+    {
+      printf("Started advertising.\n");
+    }
+
+    break;
+
+  // -------------------------------
+  // This event indicates that a new connection was opened.
+  case sl_bt_evt_connection_opened_id:
+    connection_open = true;
+    printf("%d\n", evt->data.evt_connection_opened.connection);
+    connection = evt->data.evt_connection_opened.connection;
+    printf("Connection opened.\n");
+    break;
+
+  // -------------------------------
+  // This event indicates that a connection was closed.
+  case sl_bt_evt_connection_closed_id:
+    connection_open = false;
+    printf("Connection closed.\n");
+    // Restart advertising after client has disconnected.
+    ble_status = sl_bt_advertiser_start(
+        advertising_set_handle,
+        sl_bt_advertiser_general_discoverable,
+        sl_bt_advertiser_connectable_scannable);
+
+    if (ble_status == SL_STATUS_OK)
+    {
+      printf("Started advertising after disconnect.\n");
+    }
+    break;
+  case sl_bt_evt_gatt_server_attribute_value_id:
+    // Check if the event is because of the my_data changed by the remote GATT client
+    if (characteristics[3].handle == evt->data.evt_gatt_server_attribute_value.attribute)
+    {
+      // Call my handler
+      system_id_changed_callback(&(evt->data.evt_gatt_server_attribute_value.value));
+    }
+    break;
+  case sl_bt_evt_gatt_server_characteristic_status_id:
+    // printf("Characteristic Event Code: %lx\n", SL_BT_MSG_ID(evt->header));
     break;
 
   default:
-    printf("%lx\n", SL_BT_MSG_ID(evt->header));
+    // printf("%lx\n", SL_BT_MSG_ID(evt->header));
     break;
+  }
+}
+
+static void system_id_changed_callback(uint8array *value)
+{
+  uint8_t i;
+  for (i = 0; i < value->len; i++)
+  {
+    printf("my_data[%d] = 0x%x \r\n", i, value->data[i]);
+  }
+  printf("Received data.\n");
+}
+
+static void system_id_write()
+{
+  static uint8_t values[10] = { 0 };
+  uint32_t length = 10;
+
+  sl_bt_gatt_server_send_notification(connection, characteristics[3].handle, length, values);
+  
+  for (size_t i = 0; i < 10; i++)
+  {
+    values[i]++;
   }
 }
 
@@ -162,19 +264,20 @@ static void ncp_host_tx(uint32_t length, uint8_t *tx_bytes)
 static int32_t ncp_host_rx(uint32_t length, uint8_t *rx_buffer)
 {
   int32_t result = -1;
+
+  // Wait for the rx buffer to fill up. This 4ms duration is found experimentally and is a hack. This
+  // is the shortest wait time that causes the least fails in reading the packet header
+  vTaskDelay(5);
+
   if (usart_rx_buffer.length >= length)
   {
-    /**
-     * TODO:
-     * Add a mutex here
-     **/
+    xSemaphoreTake(rx_buffer_mutex, portMAX_DELAY);
     memcpy((void *)rx_buffer, (void *)usart_rx_buffer.bytes, length);
     usart_rx_buffer.length -= length;
     memmove((void *)usart_rx_buffer.bytes, (void *)&usart_rx_buffer.bytes[length], usart_rx_buffer.length);
     result = length;
+    xSemaphoreGive(rx_buffer_mutex);
   }
-
-  printf("Received some stuff\n");
 
   return result;
 }
@@ -193,4 +296,7 @@ void USART6_IRQHandler(void)
     rx_byte = (uint8_t)USART6->DR;
     xQueueSendFromISR(usart_rx_queue, &rx_byte, NULL);
   }
+
+  // xSemaphoreGive(event_pending_semphr);
+  xSemaphoreGiveFromISR(event_pending_semphr, NULL);
 }
