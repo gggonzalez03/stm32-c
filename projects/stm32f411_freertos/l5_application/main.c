@@ -10,7 +10,7 @@
 
 #include "bma400_spi.h"
 
-#include "silabs_ble_module_test.h"
+#include "silabs_ble_freertos.h"
 
 #define DEBUG 1
 
@@ -29,7 +29,7 @@ int main()
 {
   data_ready = xSemaphoreCreateBinary();;
 
-  silabs_ble_module_test__create_tasks(1);
+  silabs_ble_freertos__initialize(1);
 
   vTaskStartScheduler();
 

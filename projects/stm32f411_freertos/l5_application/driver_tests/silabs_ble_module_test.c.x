@@ -27,6 +27,13 @@
  * broken packets and infinite loops within 'sl_bt_wait_response', for example. We want to prevent this by
  * using the 'ble_mutex' FreeRTOS mutex. Probably not all bluetooth SDK functions use the 'ncp_host_rx' internally. So
  * we need to check that as well to see if a mutex is required.
+ * 
+ * We use mutex to make sure response and event packets do not get lost and
+ * distributed to different tasks. We use semaphores to make sure we only
+ * start constructing response and event packets when the usart_rx_buffer
+ * has at least 5ms worth of data each time there is a response or event.
+ * The 5ms duration was determined experimentally trying to minimize packet
+ * content loss due to repeated buffer checks.
  **/
 
 #include <stdint.h>
@@ -47,7 +54,7 @@
 
 #include "sl_bt_api.h"
 #include "sl_bt_ncp_host.h"
-#include "gatt_database.h"
+#include "silabs_ble_gattdb.h"
 
 typedef struct
 {

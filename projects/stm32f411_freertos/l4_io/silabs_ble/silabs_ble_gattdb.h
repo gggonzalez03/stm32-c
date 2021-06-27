@@ -35,8 +35,8 @@
  * The original version can be found in l4_io/silabs_ble/sdk/source/app_gattdb.h.x
  **/
 
-#ifndef GATT_DATABASE_H
-#define GATT_DATABASE_H
+#ifndef SILABS_BLE_GATTDB_H
+#define SILABS_BLE_GATTDB_H
 
 #include "sl_bt_api.h"
 
@@ -115,4 +115,4 @@ sl_status_t gatt_database__add_service(uint16_t session, service_t *service);
 sl_status_t gatt_database__add_characteristic(uint16_t session,
                                               characteristic_t *characteristic);
 
-#endif // GATT_DATABASE_H
+#endif // SILABS_BLE_GATTDB_H

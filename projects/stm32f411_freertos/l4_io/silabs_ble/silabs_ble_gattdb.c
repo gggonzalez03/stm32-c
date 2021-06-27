@@ -35,7 +35,7 @@
  * The original version can be found in l4_io/silabs_ble/sdk/source/app_gattdb.c.x
  **/ 
 
-#include "gatt_database.h"
+#include "silabs_ble_gattdb.h"
 
 #define GATTDB_SECURITY_NONE            0x00
 #define GATTDB_FLAG_NONE                0x00
