@@ -16,6 +16,17 @@
  * Use a USB to UART converter for this to connect to the BLE device
  * 
  * After this, the device can be used as a network coprocessor using siliconlab's bluetooth APIs
+ * 
+ * Notes:
+ * After a ble command, we wait for a response. Also, there are ble events that come from the client.
+ * In both cases, we receive an interrupt from the UART peripheral. We act on this and collect the data into
+ * a FreeRTOS queue. The contents of this queue are then offloaded into 'usart_rx_buffer', from which the bluetooth SDK
+ * pulls data by calling 'ncp_host_rx' internally. Most of the SDK functions that involve response or event processing
+ * use 'ncp_host_rx' internally. But 'ncp_host_rx' actually makes changes to the 'usart_rx_buffer'. If these SDK
+ * functions are used in a multitasking environment, packets can get lost and read by different tasks, resulting in
+ * broken packets and infinite loops within 'sl_bt_wait_response', for example. We want to prevent this by
+ * using the 'ble_mutex' FreeRTOS mutex. Probably not all bluetooth SDK functions use the 'ncp_host_rx' internally. So
+ * we need to check that as well to see if a mutex is required.
  **/
 
 #include <stdint.h>
@@ -46,8 +57,8 @@ typedef struct
 
 volatile ble_buffer_t usart_rx_buffer;
 QueueHandle_t usart_rx_queue;
-xSemaphoreHandle rx_buffer_mutex;
-xSemaphoreHandle event_pending_semphr;
+xSemaphoreHandle usart_rx_buffer_mutex, ble_mutex;
+xSemaphoreHandle usart_rx_buffer_not_empty_semphr;
 
 static uint8_t advertising_set_handle = 0xff;
 bool connection_open = false;
@@ -60,6 +71,18 @@ static void sl_bt_on_event(sl_bt_msg_t *evt);
 
 static void system_id_changed_callback(uint8array *value);
 static void system_id_write();
+static void system_id_write_2();
+
+static void silabs_ble_module_test__write_characteristic_task(void *parameter);
+static void silabs_ble_module_test__write_characteristic_2_task(void *parameter);
+
+void silabs_ble_module_test__create_tasks(unsigned long priority)
+{
+  xTaskCreate(silabs_ble_module_test__task, "ble test task", 4096 / sizeof(void *), NULL, priority + 1, NULL);
+  xTaskCreate(silabs_ble_module_test__write_characteristic_task, "ble write task", 2048 / sizeof(void *), NULL, priority, NULL);
+  xTaskCreate(silabs_ble_module_test__write_characteristic_2_task, "ble write task", 2048 / sizeof(void *), NULL, priority, NULL);
+  xTaskCreate(silabs_ble_module_test__rx_buffer_filler_task, "buffer filler task", 2048 / sizeof(void *), NULL, priority + 2, NULL);
+}
 
 static void silabs_ble_module_test__configure(void)
 {
@@ -73,57 +96,88 @@ static void silabs_ble_module_test__configure(void)
   gpio__configure_with_function(GPIO__PORT_A, 12, GPIO__AF08); // rx pin
 }
 
+// This task needs second to the highest priority level among bluetooth related tasks
 void silabs_ble_module_test__task(void *parameter)
 {
-  sl_status_t ble_status;
+  sl_bt_msg_t evt;
+  sl_status_t status;
 
-  ble_status = sl_bt_api_initialize_nonblock(ncp_host_tx, ncp_host_rx, ncp_host_peek);
   silabs_ble_module_test__configure();
 
-  if (ble_status == SL_STATUS_OK)
-  {
-    sl_bt_system_reset(sl_bt_system_boot_mode_normal);
-  }
-  else
+  if (sl_bt_api_initialize_nonblock(ncp_host_tx, ncp_host_rx, ncp_host_peek) != SL_STATUS_OK)
   {
     vTaskDelete(NULL);
   }
 
-  sl_bt_msg_t evt;
-  sl_status_t status;
+  sl_bt_system_reset(sl_bt_system_boot_mode_normal);
 
   while (1)
   {
+    // Only attempt to pop an event when there is something in the tx buffer
+    xSemaphoreTake(usart_rx_buffer_not_empty_semphr, portMAX_DELAY);
 
-    xSemaphoreTake(event_pending_semphr, portMAX_DELAY);
-
+    // sl_bt_pop_event and sl_bt_on_event, like other sl_bt_* functions, call the ncp_host_rx function internally
+    // the rx buffers and the bus itself need to be protected by a mutex
+    // All other sl_bt_* functions need to be checked if they use ncp_host_rx. If so, take and give this mutex
+    xSemaphoreTake(ble_mutex, portMAX_DELAY);
     status = sl_bt_pop_event(&evt);
-    if (status != SL_STATUS_OK)
-    {
-      continue;
-    }
 
-    sl_bt_on_event(&evt);
+    if (status == SL_STATUS_OK)
+    {
+      sl_bt_on_event(&evt);
+    }
+    xSemaphoreGive(ble_mutex);
   }
 }
 
+// This task needs to have highest priority among bluetooth related tasks
 void silabs_ble_module_test__rx_buffer_filler_task(void *parameter)
 {
   uint8_t rx_byte;
 
   usart_rx_queue = xQueueCreate(1024, sizeof(uint8_t));
-  rx_buffer_mutex = xSemaphoreCreateMutex();
-  event_pending_semphr = xSemaphoreCreateBinary();
+  usart_rx_buffer_mutex = xSemaphoreCreateMutex();
+  ble_mutex = xSemaphoreCreateMutex();
+  usart_rx_buffer_not_empty_semphr = xSemaphoreCreateBinary();
 
   while (1)
   {
     if (xQueueReceive(usart_rx_queue, &rx_byte, portMAX_DELAY))
     {
-      xSemaphoreTake(rx_buffer_mutex, portMAX_DELAY);
+      xSemaphoreTake(usart_rx_buffer_mutex, portMAX_DELAY);
       usart_rx_buffer.bytes[usart_rx_buffer.length] = rx_byte;
       usart_rx_buffer.length++;
-      xSemaphoreGive(rx_buffer_mutex);
+      xSemaphoreGive(usart_rx_buffer_mutex);
+      xSemaphoreGive(usart_rx_buffer_not_empty_semphr);
     }
+  }
+}
+
+static void silabs_ble_module_test__write_characteristic_task(void *parameter)
+{
+  while (1)
+  {
+    if (connection_open)
+    {
+      xSemaphoreTake(ble_mutex, portMAX_DELAY);
+      system_id_write();
+      xSemaphoreGive(ble_mutex);
+    }
+    vTaskDelay(100);
+  }
+}
+
+static void silabs_ble_module_test__write_characteristic_2_task(void *parameter)
+{
+  while (1)
+  {
+    if (connection_open)
+    {
+      xSemaphoreTake(ble_mutex, portMAX_DELAY);
+      system_id_write_2();
+      xSemaphoreGive(ble_mutex);
+    }
+    vTaskDelay(300);
   }
 }
 
@@ -219,6 +273,10 @@ static void sl_bt_on_event(sl_bt_msg_t *evt)
       // Call my handler
       system_id_changed_callback(&(evt->data.evt_gatt_server_attribute_value.value));
     }
+    if (characteristics[2].handle == evt->data.evt_gatt_server_attribute_value.attribute)
+    {
+      system_id_changed_callback(&(evt->data.evt_gatt_server_attribute_value.value));
+    }
     break;
   case sl_bt_evt_gatt_server_characteristic_status_id:
     // printf("Characteristic Event Code: %lx\n", SL_BT_MSG_ID(evt->header));
@@ -237,16 +295,29 @@ static void system_id_changed_callback(uint8array *value)
   {
     printf("my_data[%d] = 0x%x \r\n", i, value->data[i]);
   }
-  printf("Received data.\n");
+  printf("--------------------------------\n");
 }
 
 static void system_id_write()
 {
-  static uint8_t values[10] = { 0 };
+  static uint8_t values[10] = {0};
   uint32_t length = 10;
 
   sl_bt_gatt_server_send_notification(connection, characteristics[3].handle, length, values);
-  
+
+  for (size_t i = 0; i < 10; i++)
+  {
+    values[i]++;
+  }
+}
+
+static void system_id_write_2()
+{
+  static uint8_t values[10] = {0};
+  uint32_t length = 10;
+
+  sl_bt_gatt_server_send_notification(connection, characteristics[2].handle, length, values);
+
   for (size_t i = 0; i < 10; i++)
   {
     values[i]++;
@@ -271,12 +342,12 @@ static int32_t ncp_host_rx(uint32_t length, uint8_t *rx_buffer)
 
   if (usart_rx_buffer.length >= length)
   {
-    xSemaphoreTake(rx_buffer_mutex, portMAX_DELAY);
+    xSemaphoreTake(usart_rx_buffer_mutex, portMAX_DELAY);
     memcpy((void *)rx_buffer, (void *)usart_rx_buffer.bytes, length);
     usart_rx_buffer.length -= length;
     memmove((void *)usart_rx_buffer.bytes, (void *)&usart_rx_buffer.bytes[length], usart_rx_buffer.length);
     result = length;
-    xSemaphoreGive(rx_buffer_mutex);
+    xSemaphoreGive(usart_rx_buffer_mutex);
   }
 
   return result;
@@ -296,7 +367,4 @@ void USART6_IRQHandler(void)
     rx_byte = (uint8_t)USART6->DR;
     xQueueSendFromISR(usart_rx_queue, &rx_byte, NULL);
   }
-
-  // xSemaphoreGive(event_pending_semphr);
-  xSemaphoreGiveFromISR(event_pending_semphr, NULL);
 }

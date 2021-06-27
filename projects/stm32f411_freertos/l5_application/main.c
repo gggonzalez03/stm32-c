@@ -10,6 +10,8 @@
 
 #include "bma400_spi.h"
 
+#include "silabs_ble_module_test.h"
+
 #define DEBUG 1
 
 #if DEBUG
@@ -27,7 +29,7 @@ int main()
 {
   data_ready = xSemaphoreCreateBinary();;
 
-  xTaskCreate(accelerometer_task, "bma400 acc", 1024 / sizeof(void *), NULL, 1, NULL);
+  silabs_ble_module_test__create_tasks(1);
 
   vTaskStartScheduler();
 
