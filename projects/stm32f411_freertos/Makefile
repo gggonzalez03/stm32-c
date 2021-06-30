@@ -12,7 +12,7 @@ LINKER_FILE := l0_lowlevel/linker/stm32f411ceux_linker.ld
 OPTIMIZATION = s
 CFLAGS = -c -mcpu=$(MARCH) -mthumb -mfloat-abi=hard -std=gnu11 -Wall -O$(OPTIMIZATION)
 OPTIONAL_LDFLAGS = -u _printf_float
-LDFLAGS = -mcpu=$(MARCH) -mthumb -mfloat-abi=hard --specs=nano.specs -T $(LINKER_FILE) $(OPTIONAL_LDFLAGS) -Wl,-Map=${BUILD_DIR}/final.map -L./l4_io/silabs_ble/sdk/libraries/ -lrail_efr32xg12_gcc_release -lbluetooth -lpsstore
+LDFLAGS = -mcpu=$(MARCH) -mthumb -mfloat-abi=hard --specs=nano.specs -T $(LINKER_FILE) $(OPTIONAL_LDFLAGS) -Wl,-Map=${BUILD_DIR}/final.map
 
 SRC_DIRS := ./
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
