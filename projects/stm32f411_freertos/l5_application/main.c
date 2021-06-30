@@ -25,7 +25,7 @@
 
 static uint8_t advertising_set_handle = 0xFF;
 static uint8_t connection_id = 0xFF;
-static void system_id_changed_callback(uint8array *value);
+static void attribute_changed_callback(uint8array *value);
 static void silabs_ble_freertos__on_event(sl_bt_msg_t *evt);
 
 void accelerometer_task(void *parameter);
@@ -38,12 +38,12 @@ int main()
 {
   data_ready = xSemaphoreCreateBinary();
   z_queue = xQueueCreate(10, sizeof(uint8_t));
-  
+
   silabs_ble_freertos__register_on_event_callback(silabs_ble_freertos__on_event);
   silabs_ble_freertos__initialize(4);
-  
-  xTaskCreate(silabs_ble_freertos__write_characteristic_task, "write task", 1024 / sizeof(void*), NULL, 1, NULL);
-  xTaskCreate(accelerometer_task, "accel task", 4096 / sizeof(void*), NULL, 1, NULL);
+
+  xTaskCreate(silabs_ble_freertos__write_characteristic_task, "write task", 1024 / sizeof(void *), NULL, 1, NULL);
+  xTaskCreate(accelerometer_task, "accel task", 4096 / sizeof(void *), NULL, 1, NULL);
 
   vTaskStartScheduler();
 
@@ -116,14 +116,14 @@ void EXTI3_IRQHandler(void)
   exti__clear_external_interrupt(3);
 }
 
-static void system_id_changed_callback(uint8array *value)
+static void attribute_changed_callback(uint8array *value)
 {
   uint8_t i;
   for (i = 0; i < value->len; i++)
   {
-    printf("my_data[%d] = 0x%x \r\n", i, value->data[i]);
+    PRINTF("data[%d] = 0x%x \r\n", i, value->data[i]);
   }
-  printf("--------------------------------\n");
+  PRINTF("--------------------------------\n");
 }
 
 static void silabs_ble_freertos__on_event(sl_bt_msg_t *evt)
@@ -135,23 +135,8 @@ static void silabs_ble_freertos__on_event(sl_bt_msg_t *evt)
   switch (SL_BT_MSG_ID(evt->header))
   {
   case sl_bt_evt_system_boot_id:
-    printf("Bluetooth stack booted: v%d.%d.%d-b%d\n",
-           evt->data.evt_system_boot.major,
-           evt->data.evt_system_boot.minor,
-           evt->data.evt_system_boot.patch,
-           evt->data.evt_system_boot.build);
     ble_status = sl_bt_system_get_identity_address(&address, &address_type);
-    if (ble_status == SL_STATUS_OK)
-    {
-      printf("Bluetooth %s address: %02X:%02X:%02X:%02X:%02X:%02X\n",
-             address_type ? "static random" : "public device",
-             address.addr[5],
-             address.addr[4],
-             address.addr[3],
-             address.addr[2],
-             address.addr[1],
-             address.addr[0]);
-    }
+    silabs_ble_freertos__assert(ble_status);
 
     // Pad and reverse unique ID to get System ID.
     characteristics[SYSTEM_ID].value[0] = address.addr[5];
@@ -163,9 +148,12 @@ static void silabs_ble_freertos__on_event(sl_bt_msg_t *evt)
     characteristics[SYSTEM_ID].value[6] = address.addr[1];
     characteristics[SYSTEM_ID].value[7] = address.addr[0];
 
-    gatt_database__initialize();
+    ble_status = gatt_database__initialize();
+    silabs_ble_freertos__assert(ble_status);
 
     ble_status = sl_bt_advertiser_create_set(&advertising_set_handle);
+    silabs_ble_freertos__assert(ble_status);
+
     // Set advertising interval to 100ms.
     ble_status = sl_bt_advertiser_set_timing(
         advertising_set_handle,
@@ -173,61 +161,59 @@ static void silabs_ble_freertos__on_event(sl_bt_msg_t *evt)
         160, // max. adv. interval (milliseconds * 1.6)
         0,   // adv. duration
         0);  // max. num. adv. events
-    // Start general advertising and enable connections.
-    ble_status = sl_bt_advertiser_start(
-        advertising_set_handle,
-        sl_bt_advertiser_general_discoverable,
-        sl_bt_advertiser_connectable_scannable);
+    silabs_ble_freertos__assert(ble_status);
 
-    if (ble_status == SL_STATUS_OK)
-    {
-      printf("Started advertising.\n");
-    }
+    ble_status = sl_bt_advertiser_start(advertising_set_handle,
+                                        sl_bt_advertiser_general_discoverable,
+                                        sl_bt_advertiser_connectable_scannable);
+    silabs_ble_freertos__assert(ble_status);
+
+    PRINTF("Bluetooth stack booted: v%d.%d.%d-b%d\n",
+           evt->data.evt_system_boot.major,
+           evt->data.evt_system_boot.minor,
+           evt->data.evt_system_boot.patch,
+           evt->data.evt_system_boot.build);
+    PRINTF("Bluetooth %s address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+           address_type ? "static random" : "public device",
+           address.addr[5],
+           address.addr[4],
+           address.addr[3],
+           address.addr[2],
+           address.addr[1],
+           address.addr[0]);
+    PRINTF("Started advertising.\n");
 
     break;
-
-  // -------------------------------
-  // This event indicates that a new connection was opened.
   case sl_bt_evt_connection_opened_id:
-    printf("%d\n", evt->data.evt_connection_opened.connection);
     connection_id = evt->data.evt_connection_opened.connection;
-    printf("Connection opened.\n");
+    PRINTF("Connection opened.\n");
     break;
-
-  // -------------------------------
-  // This event indicates that a connection was closed.
   case sl_bt_evt_connection_closed_id:
-    printf("Connection closed.\n");
     connection_id = 0xFF;
     // Restart advertising after client has disconnected.
-    ble_status = sl_bt_advertiser_start(
-        advertising_set_handle,
-        sl_bt_advertiser_general_discoverable,
-        sl_bt_advertiser_connectable_scannable);
+    ble_status = sl_bt_advertiser_start(advertising_set_handle,
+                                        sl_bt_advertiser_general_discoverable,
+                                        sl_bt_advertiser_connectable_scannable);
+    silabs_ble_freertos__assert(ble_status);
 
-    if (ble_status == SL_STATUS_OK)
-    {
-      printf("Started advertising after disconnect.\n");
-    }
+    PRINTF("Started advertising after disconnect.\n");
     break;
   case sl_bt_evt_gatt_server_attribute_value_id:
-    // Check if the event is because of the my_data changed by the remote GATT client
-    if (characteristics[3].handle == evt->data.evt_gatt_server_attribute_value.attribute)
+
+    if (characteristics[MANUFACTURER_NAME_STRING].handle == evt->data.evt_gatt_server_attribute_value.attribute)
     {
-      // Call my handler
-      system_id_changed_callback(&(evt->data.evt_gatt_server_attribute_value.value));
+      attribute_changed_callback(&(evt->data.evt_gatt_server_attribute_value.value));
     }
-    if (characteristics[2].handle == evt->data.evt_gatt_server_attribute_value.attribute)
+    if (characteristics[SYSTEM_ID].handle == evt->data.evt_gatt_server_attribute_value.attribute)
     {
-      system_id_changed_callback(&(evt->data.evt_gatt_server_attribute_value.value));
+      attribute_changed_callback(&(evt->data.evt_gatt_server_attribute_value.value));
     }
     break;
   case sl_bt_evt_gatt_server_characteristic_status_id:
-    // printf("Characteristic Event Code: %lx\n", SL_BT_MSG_ID(evt->header));
+    // PRINTF("Characteristic Event Code: %lx\n", SL_BT_MSG_ID(evt->header));
     break;
 
   default:
-    // printf("%lx\n", SL_BT_MSG_ID(evt->header));
     break;
   }
 }

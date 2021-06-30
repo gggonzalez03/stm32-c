@@ -30,3 +30,5 @@ bool silabs_ble_freertos__send_notification(uint8_t connection,
                                             const uint8_t *values);
 
 bool silabs_ble_freertos__register_on_event_callback(silabs_ble_freertos__on_event_callback_f on_event_cb);
+
+void silabs_ble_freertos__assert(sl_status_t status);

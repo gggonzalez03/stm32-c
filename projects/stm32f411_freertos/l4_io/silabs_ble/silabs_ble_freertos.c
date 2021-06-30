@@ -16,6 +16,8 @@ QueueHandle_t usart_rx_queue;
 xSemaphoreHandle usart_rx_buffer_mutex, ble_mutex;
 xSemaphoreHandle usart_rx_buffer_not_empty_semphr;
 
+TaskHandle_t ble_main_task, rx_buffer_filler_task;
+
 /*************************************************************************
  * 
  *                      PRIVATE FUNCTION DEFINITIONS
@@ -128,8 +130,8 @@ void silabs_ble_freertos__initialize(unsigned long priority)
   ble_mutex = xSemaphoreCreateMutex();
   usart_rx_buffer_not_empty_semphr = xSemaphoreCreateBinary();
 
-  xTaskCreate(silabs_ble_freertos__ble_main_task, "ble test task", 4096 / sizeof(void *), NULL, priority, NULL);
-  xTaskCreate(silabs_ble_freertos__rx_buffer_filler_task, "buffer filler task", 2048 / sizeof(void *), NULL, (priority + 1), NULL);
+  xTaskCreate(silabs_ble_freertos__ble_main_task, "ble test task", 4096 / sizeof(void *), NULL, priority, &ble_main_task);
+  xTaskCreate(silabs_ble_freertos__rx_buffer_filler_task, "buffer filler task", 2048 / sizeof(void *), NULL, (priority + 1), &rx_buffer_filler_task);
 }
 
 bool silabs_ble_freertos__send_notification(uint8_t connection,
@@ -154,4 +156,13 @@ bool silabs_ble_freertos__register_on_event_callback(silabs_ble_freertos__on_eve
 {
   on_event = on_event_cb;
   return true;
+}
+
+void silabs_ble_freertos__assert(sl_status_t status)
+{
+  if (status != SL_STATUS_OK)
+  {
+    vTaskSuspend(ble_main_task);
+    vTaskSuspend(rx_buffer_filler_task);
+  }
 }
