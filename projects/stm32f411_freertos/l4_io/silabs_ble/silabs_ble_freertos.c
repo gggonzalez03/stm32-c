@@ -8,11 +8,9 @@
 
 #include "sl_bt_api.h"
 #include "sl_bt_ncp_host.h"
-#include "silabs_ble_gattdb.h"
 
 volatile silabs_ble_freertos__buffer_t usart_rx_buffer;
-uint8_t advertising_set_handle = 0xFF;
-uint8_t connection_id = 0xFF;
+static silabs_ble_freertos__on_event_callback_f on_event = NULL;
 
 QueueHandle_t usart_rx_queue;
 xSemaphoreHandle usart_rx_buffer_mutex, ble_mutex;
@@ -80,6 +78,11 @@ static void silabs_ble_freertos__ble_main_task(void *parameter)
     // Only attempt to pop an event when there is something in the tx buffer
     xSemaphoreTake(usart_rx_buffer_not_empty_semphr, portMAX_DELAY);
 
+    if (on_event == NULL)
+    {
+      continue;
+    }
+
     // sl_bt_pop_event and sl_bt_on_event, like other sl_bt_* functions, call the ncp_host_rx function internally
     // the rx buffers and the bus itself need to be protected by a mutex
     // All other sl_bt_* functions need to be checked if they use ncp_host_rx. If so, take and give this mutex
@@ -88,7 +91,7 @@ static void silabs_ble_freertos__ble_main_task(void *parameter)
 
     if (status == SL_STATUS_OK)
     {
-      silabs_ble_freertos__on_event(&evt);
+      (*on_event)(&evt);
     }
     xSemaphoreGive(ble_mutex);
   }
@@ -129,17 +132,6 @@ void silabs_ble_freertos__initialize(unsigned long priority)
   xTaskCreate(silabs_ble_freertos__rx_buffer_filler_task, "buffer filler task", 2048 / sizeof(void *), NULL, (priority + 1), NULL);
 }
 
-bool silabs_ble_freertos__get_connection(uint8_t *id)
-{
-  if (connection_id == 0xFF)
-  {
-    return false;
-  }
-
-  *id = connection_id;
-  return true;
-}
-
 bool silabs_ble_freertos__send_notification(uint8_t connection,
                                             uint16_t characteristic_handle,
                                             uint32_t length,
@@ -147,7 +139,7 @@ bool silabs_ble_freertos__send_notification(uint8_t connection,
 {
   sl_status_t status;
   xSemaphoreTake(ble_mutex, portMAX_DELAY);
-  status = sl_bt_gatt_server_send_notification(connection, characteristics[3].handle, length, values);
+  status = sl_bt_gatt_server_send_notification(connection, characteristic_handle, length, values);
   xSemaphoreGive(ble_mutex);
 
   if (status != SL_STATUS_OK)
@@ -155,5 +147,11 @@ bool silabs_ble_freertos__send_notification(uint8_t connection,
     return false;
   }
 
+  return true;
+}
+
+bool silabs_ble_freertos__register_on_event_callback(silabs_ble_freertos__on_event_callback_f on_event_cb)
+{
+  on_event = on_event_cb;
   return true;
 }

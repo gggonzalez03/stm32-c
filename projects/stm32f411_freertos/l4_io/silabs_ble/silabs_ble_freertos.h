@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "sl_bt_api.h"
+
+typedef void (*silabs_ble_freertos__on_event_callback_f)(sl_bt_msg_t *event);
+
 typedef struct
 {
   uint16_t length;
@@ -20,13 +24,9 @@ typedef struct
  **/
 void silabs_ble_freertos__initialize(unsigned long priority);
 
-/**
- * Get the current connection ID
- * @return true if connection exists. The connection id stored in id
- **/
-bool silabs_ble_freertos__get_connection(uint8_t *id);
-
 bool silabs_ble_freertos__send_notification(uint8_t connection,
                                             uint16_t characteristic_handle,
                                             uint32_t length,
                                             const uint8_t *values);
+
+bool silabs_ble_freertos__register_on_event_callback(silabs_ble_freertos__on_event_callback_f on_event_cb);
