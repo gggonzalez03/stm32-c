@@ -120,3 +120,14 @@ void usart__enable_tx_interrrupt(usart_e usart_id)
   usart.registers->CR1 |= tx_interrupt_enable;
   NVIC_EnableIRQ(usart.irq_number);
 }
+
+void usart__enable_hardware_flow_control(usart_e usart_id)
+{
+  usart_s usart = usarts[usart_id];
+
+  uint32_t cts_enable = (1UL << 9);
+  uint32_t rts_enable = (1UL << 8);
+
+  usart.registers->CR3 |= (cts_enable | rts_enable);
+  // NVIC_EnableIRQ(usart.irq_number);
+}

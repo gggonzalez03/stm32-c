@@ -34,15 +34,21 @@ void silabs_ble_freertos__write_characteristic_task(void *parameter);
 SemaphoreHandle_t data_ready;
 QueueHandle_t z_queue;
 
+
+typedef struct
+{
+  uint8_t payload[252];
+} ble_payload_t;
+
 int main()
 {
   data_ready = xSemaphoreCreateBinary();
-  z_queue = xQueueCreate(10, sizeof(uint8_t));
+  z_queue = xQueueCreate(10, sizeof(ble_payload_t *));
 
   silabs_ble_freertos__register_on_event_callback(silabs_ble_freertos__on_event);
   silabs_ble_freertos__initialize(4);
 
-  xTaskCreate(silabs_ble_freertos__write_characteristic_task, "write task", 1024 / sizeof(void *), NULL, 1, NULL);
+  xTaskCreate(silabs_ble_freertos__write_characteristic_task, "write task", 4096 / sizeof(void *), NULL, 1, NULL);
   xTaskCreate(accelerometer_task, "accel task", 4096 / sizeof(void *), NULL, 1, NULL);
 
   vTaskStartScheduler();
@@ -53,7 +59,9 @@ int main()
 void accelerometer_task(void *parameter)
 {
   float z;
-  uint8_t z_int;
+
+  ble_payload_t payload;
+  uint8_t index_counter = 0;
 
   bool bma_ok = bma400_spi__init();
 
@@ -68,11 +76,11 @@ void accelerometer_task(void *parameter)
     if (xSemaphoreTake(data_ready, portMAX_DELAY))
     {
       z = bma400_spi__get_z_mps2();
-      z_int = (uint8_t)z;
+      payload.payload[index_counter] = (uint8_t)z;
 
       PRINTF("z: %f\n", z);
 
-      xQueueSend(z_queue, (void *)&z_int, portMAX_DELAY);
+      xQueueSend(z_queue, (void *)&payload, portMAX_DELAY);
     }
     else
     {
@@ -85,15 +93,15 @@ void accelerometer_task(void *parameter)
 
 void silabs_ble_freertos__write_characteristic_task(void *parameter)
 {
-  uint8_t z;
-  uint32_t length = 1;
+  ble_payload_t z;
+  uint32_t length = sizeof(ble_payload_t);
 
   while (1)
   {
     if (connection_id != 0xFF)
     {
       xQueueReceive(z_queue, &z, portMAX_DELAY);
-      silabs_ble_freertos__send_notification(connection_id, characteristics[2].handle, length, &z);
+      silabs_ble_freertos__send_notification(connection_id, characteristics[2].handle, length, z.payload);
     }
     else
     {
@@ -110,10 +118,10 @@ void USART1_IRQHandler(void)
   }
 }
 
-void EXTI3_IRQHandler(void)
+void EXTI0_IRQHandler(void)
 {
   xSemaphoreGiveFromISR(data_ready, NULL);
-  exti__clear_external_interrupt(3);
+  exti__clear_external_interrupt(0);
 }
 
 static void attribute_changed_callback(uint8array *value)

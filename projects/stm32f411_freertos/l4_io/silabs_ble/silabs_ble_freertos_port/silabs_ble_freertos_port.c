@@ -22,25 +22,28 @@ void silabs_ble_freertos__configure_usart(void)
   stm_peripheral__power_on_peripheral(STM_PERIPHERAL_USART2, false);
   stm_peripheral__power_on_peripheral(STM_PERIPHERAL_GPIOA, false);
 
-  usart__init(USART__6, clock__get_core_clock_frq(), 115200, false);
-  usart__enable_rx_interrrupt(USART__6);
+  usart__init(USART__2, clock__get_apb1_clock_frq(), 115200, false);
+  usart__enable_rx_interrrupt(USART__2);
+  usart__enable_hardware_flow_control(USART__2);
 
-  gpio__configure_with_function(GPIO__PORT_A, 11, GPIO__AF08); // tx pin
-  gpio__configure_with_function(GPIO__PORT_A, 12, GPIO__AF08); // rx pin
+  gpio__configure_with_function(GPIO__PORT_A, 0, GPIO__AF07); // cts pin
+  gpio__configure_with_function(GPIO__PORT_A, 1, GPIO__AF07); // rts pin
+  gpio__configure_with_function(GPIO__PORT_A, 2, GPIO__AF07); // tx pin
+  gpio__configure_with_function(GPIO__PORT_A, 3, GPIO__AF07); // rx pin
 }
 
 void silabs_ble_freertos__uart_transmit_one_byte(uint8_t byte)
 {
-  usart__polled_transmit(USART__6, byte);
+  usart__polled_transmit(USART__2, byte);
 }
 
-void USART6_IRQHandler(void)
+void USART2_IRQHandler(void)
 {
   uint8_t rx_byte;
 
-  if (USART6->SR & USART_SR_RXNE)
+  if (USART2->SR & USART_SR_RXNE)
   {
-    rx_byte = (uint8_t)USART6->DR;
+    rx_byte = (uint8_t)USART2->DR;
     xQueueSendFromISR(usart_rx_queue, &rx_byte, NULL);
   }
 }
