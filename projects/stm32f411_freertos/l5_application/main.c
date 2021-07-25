@@ -23,7 +23,7 @@
 #define PRINTF(...)
 #endif
 
-static uint8_t advertising_set_handle = 0xFF;
+static uint8_t advertiser_set_handle = 0xFF;
 static uint8_t connection_id = 0xFF;
 static void attribute_changed_callback(uint8array *value);
 static void silabs_ble_freertos__on_event(sl_bt_msg_t *evt);
@@ -37,7 +37,7 @@ QueueHandle_t z_queue;
 
 typedef struct
 {
-  uint8_t payload[252];
+  uint8_t payload[182];
 } ble_payload_t;
 
 int main()
@@ -94,7 +94,7 @@ void accelerometer_task(void *parameter)
 void silabs_ble_freertos__write_characteristic_task(void *parameter)
 {
   ble_payload_t z;
-  uint32_t length = sizeof(ble_payload_t);
+  uint8_t length = sizeof(ble_payload_t);
 
   while (1)
   {
@@ -159,19 +159,19 @@ static void silabs_ble_freertos__on_event(sl_bt_msg_t *evt)
     ble_status = gatt_database__initialize();
     silabs_ble_freertos__assert(ble_status);
 
-    ble_status = sl_bt_advertiser_create_set(&advertising_set_handle);
+    ble_status = sl_bt_advertiser_create_set(&advertiser_set_handle);
     silabs_ble_freertos__assert(ble_status);
 
     // Set advertising interval to 100ms.
     ble_status = sl_bt_advertiser_set_timing(
-        advertising_set_handle,
+        advertiser_set_handle,
         160, // min. adv. interval (milliseconds * 1.6)
         160, // max. adv. interval (milliseconds * 1.6)
         0,   // adv. duration
         0);  // max. num. adv. events
     silabs_ble_freertos__assert(ble_status);
 
-    ble_status = sl_bt_advertiser_start(advertising_set_handle,
+    ble_status = sl_bt_advertiser_start(advertiser_set_handle,
                                         sl_bt_advertiser_general_discoverable,
                                         sl_bt_advertiser_connectable_scannable);
     silabs_ble_freertos__assert(ble_status);
@@ -199,7 +199,7 @@ static void silabs_ble_freertos__on_event(sl_bt_msg_t *evt)
   case sl_bt_evt_connection_closed_id:
     connection_id = 0xFF;
     // Restart advertising after client has disconnected.
-    ble_status = sl_bt_advertiser_start(advertising_set_handle,
+    ble_status = sl_bt_advertiser_start(advertiser_set_handle,
                                         sl_bt_advertiser_general_discoverable,
                                         sl_bt_advertiser_connectable_scannable);
     silabs_ble_freertos__assert(ble_status);
