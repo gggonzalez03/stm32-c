@@ -31,7 +31,7 @@ bool usart__init(usart_e usart_id, uint32_t peripheral_clock, uint32_t baud_rate
  * @param byte is the pointer to where the character will be stored
  * @return whether receive is successful or not
  **/
-bool usart__polled_receive(usart_e usart_id, char* const byte);
+bool usart__polled_receive(usart_e usart_id, char *const byte);
 
 /**
  * Transmit a character over USART
@@ -52,8 +52,13 @@ void usart__enable_rx_interrrupt(usart_e usart_id);
  **/
 void usart__enable_tx_interrrupt(usart_e usart_id);
 
+/**
+ * @param usart_id is the USART peripheral to enable flow control for
+ **/
+void usart__enable_hardware_flow_control(usart_e usart_id);
+
 #ifdef USE_FREERTOS
 bool usart__enable_queues(usart_e usart_id, QueueHandle_t rx_queue, QueueHandle_t tx_queue);
-bool usart__queued_receive(usart_e usart_id, char* const byte, uint32_t timeout);
+bool usart__queued_receive(usart_e usart_id, char *const byte, uint32_t timeout);
 bool usart__queued_transmit(usart_e usart_id, char byte, uint32_t timeout);
 #endif

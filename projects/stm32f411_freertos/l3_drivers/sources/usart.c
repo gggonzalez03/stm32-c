@@ -82,8 +82,9 @@ bool usart__init(usart_e usart_id, uint32_t peripheral_clock, uint32_t baud_rate
 bool usart__polled_receive(usart_e usart_id, char* const byte)
 {
   usart_s usart = usarts[usart_id];
+  uint32_t rx_register_full = (1UL << 5);
 
-  while (!(usart.registers->SR & (1UL << 5)));
+  while (!(usart.registers->SR & rx_register_full));
   *byte = (char)usart.registers->DR;
 
   return true;
@@ -92,9 +93,10 @@ bool usart__polled_receive(usart_e usart_id, char* const byte)
 bool usart__polled_transmit(usart_e usart_id, char byte)
 {
   usart_s usart = usarts[usart_id];
+  uint32_t tx_register_empty = (1UL << 7);
 
   usart.registers->DR = byte & 0xFF;
-  while (!(usart.registers->SR & (1UL << 6)));
+  while (!(usart.registers->SR & tx_register_empty));
 
   return true;
 }
@@ -117,4 +119,15 @@ void usart__enable_tx_interrrupt(usart_e usart_id)
 
   usart.registers->CR1 |= tx_interrupt_enable;
   NVIC_EnableIRQ(usart.irq_number);
+}
+
+void usart__enable_hardware_flow_control(usart_e usart_id)
+{
+  usart_s usart = usarts[usart_id];
+
+  uint32_t cts_enable = (1UL << 9);
+  uint32_t rts_enable = (1UL << 8);
+
+  usart.registers->CR3 |= (cts_enable | rts_enable);
+  // NVIC_EnableIRQ(usart.irq_number);
 }

@@ -13,8 +13,8 @@
  * 2. Allow multiple chip selects
  **/
 
-static const gpio__gpio_s interrupt1_pin = {GPIO__PORT_A, 3};
-static const gpio__gpio_s cs_pin = {GPIO__PORT_A, 4};
+static const gpio__gpio_s interrupt1_pin = {GPIO__PORT_B, 0};
+static const gpio__gpio_s cs_pin = {GPIO__PORT_B, 1};
 static const gpio__gpio_s clk_pin = {GPIO__PORT_A, 5};
 static const gpio__gpio_s miso_pin = {GPIO__PORT_A, 6};
 static const gpio__gpio_s mosi_pin = {GPIO__PORT_A, 7};
@@ -23,6 +23,7 @@ void bma400_spi__configure_spi(uint32_t spi_clock_hz)
 {
   stm_peripheral__power_on_peripheral(STM_PERIPHERAL_SPI1, false);
   stm_peripheral__power_on_peripheral(STM_PERIPHERAL_GPIOA, false);
+  stm_peripheral__power_on_peripheral(STM_PERIPHERAL_GPIOB, false);
   stm_peripheral__power_on_peripheral(STM_PERIPHERAL_SYSCFG, false);
 
   gpio__set_as_output(cs_pin);
