@@ -162,9 +162,77 @@ bool bma400_i2c__data_ready(bma400_i2c__address bma400_address)
   return false;
 }
 
-int16_t bma400_i2c__get_x_raw(bma400_i2c__address bma400_address);
-int16_t bma400_i2c__get_y_raw(bma400_i2c__address bma400_address);
-int16_t bma400_i2c__get_z_raw(bma400_i2c__address bma400_address);
-float bma400_i2c__get_x_mps2(bma400_i2c__address bma400_address);
-float bma400_i2c__get_y_mps2(bma400_i2c__address bma400_address);
-float bma400_i2c__get_z_mps2(bma400_i2c__address bma400_address);
+int16_t bma400_i2c__get_x_raw(bma400_i2c__address bma400_address)
+{
+  const uint8_t x_lsb_reg = 0x04;
+  uint8_t x_bytes[2];
+  int16_t x_raw;
+
+  bma400_i2c__read(bma400_address, x_lsb_reg, &x_bytes, 2);
+  x_raw = (int16_t)((x_bytes[1] & 0x0F) << 8) | x_bytes[0];
+  bma400_i2c__get_negative(&x_raw);
+
+  return x_raw;
+}
+
+int16_t bma400_i2c__get_y_raw(bma400_i2c__address bma400_address)
+{
+  const uint8_t y_lsb_reg = 0x06;
+  uint8_t y_bytes[2];
+  int16_t y_raw;
+
+  bma400_i2c__read(bma400_address, y_lsb_reg, &y_bytes, 2);
+  y_raw = (int16_t)((y_bytes[1] & 0x0F) << 8) | y_bytes[0];
+  bma400_i2c__get_negative(&y_raw);
+
+  return y_raw;
+}
+
+int16_t bma400_i2c__get_z_raw(bma400_i2c__address bma400_address)
+{
+  const uint8_t z_lsb_reg = 0x08;
+  uint8_t z_bytes[2];
+  int16_t z_raw;
+
+  bma400_i2c__read(bma400_address, z_lsb_reg, &z_bytes, 2);
+  z_raw = (int16_t)((z_bytes[1] & 0x0F) << 8) | z_bytes[0];
+  bma400_i2c__get_negative(&z_raw);
+
+  return z_raw;
+}
+
+float bma400_i2c__get_x_mps2(bma400_i2c__address bma400_address)
+{
+  int16_t half_scale, x_raw;
+  float x_mps2;
+
+  half_scale = 1 << (bit_width - 1);
+  x_raw = bma400_i2c__get_x_raw(bma400_address);
+  x_mps2 = (earth_gravity * x_raw * g_range) / half_scale;
+
+  return x_mps2;
+}
+
+float bma400_i2c__get_y_mps2(bma400_i2c__address bma400_address)
+{
+  int16_t half_scale, y_raw;
+  float y_mps2;
+
+  half_scale = 1 << (bit_width - 1);
+  y_raw = bma400_i2c__get_y_raw(bma400_address);
+  y_mps2 = (earth_gravity * y_raw * g_range) / half_scale;
+
+  return y_mps2;
+}
+
+float bma400_i2c__get_z_mps2(bma400_i2c__address bma400_address)
+{
+  int16_t half_scale, z_raw;
+  float z_mps2;
+
+  half_scale = 1 << (bit_width - 1);
+  z_raw = bma400_i2c__get_z_raw(bma400_address);
+  z_mps2 = (earth_gravity * z_raw * g_range) / half_scale;
+
+  return z_mps2;
+}

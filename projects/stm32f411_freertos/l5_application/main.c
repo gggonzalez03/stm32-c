@@ -9,7 +9,7 @@
 #include "semphr.h"
 #include "queue.h"
 
-#include "bma400_spi.h"
+#include "bma400_i2c.h"
 
 #include "silabs_ble_freertos.h"
 #include "silabs_ble_gattdb.h"
@@ -63,7 +63,7 @@ void accelerometer_task(void *parameter)
   ble_payload_t payload;
   uint8_t index_counter = 0;
 
-  bool bma_ok = bma400_spi__init();
+  bool bma_ok = bma400_i2c__init(BMA400_I2C__0X28);
 
   while (1)
   {
@@ -75,7 +75,7 @@ void accelerometer_task(void *parameter)
 
     if (xSemaphoreTake(data_ready, portMAX_DELAY))
     {
-      z = bma400_spi__get_z_mps2();
+      z = bma400_i2c__get_z_mps2(BMA400_I2C__0X28);
       payload.payload[index_counter] = (uint8_t)z;
 
       PRINTF("z: %f\n", z);

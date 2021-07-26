@@ -9,12 +9,21 @@
 #include "gpio.h"
 #include "i2c1.h"
 
+static const gpio__gpio_s scl_pin = {GPIO__PORT_B, 8};
+static const gpio__gpio_s sda_pin = {GPIO__PORT_B, 9};
+static const gpio__gpio_s interrupt1_pin = {GPIO__PORT_B, 0};
+
 void bma400_i2c__configure(void)
 {
-  stm_peripheral__power_on_peripheral(STM_PERIPHERAL_GPIOB, false);
   stm_peripheral__power_on_peripheral(STM_PERIPHERAL_I2C1, false);
-  gpio__configure_with_function(GPIO__PORT_B, 8, GPIO__AF04); // I2C1 SCL
-  gpio__configure_with_function(GPIO__PORT_B, 9, GPIO__AF04); // I2C1 SDA
+  stm_peripheral__power_on_peripheral(STM_PERIPHERAL_GPIOB, false);
+  stm_peripheral__power_on_peripheral(STM_PERIPHERAL_SYSCFG, false);
+  gpio__configure_with_function(scl_pin.port, scl_pin.pin, GPIO__AF04); // I2C1 SCL
+  gpio__configure_with_function(sda_pin.port, sda_pin.pin, GPIO__AF04); // I2C1 SDA
+
+  gpio__set_as_input(interrupt1_pin);
+  gpio__enable_pull_down_resistor(interrupt1_pin);
+  gpio__enable_interrupt(interrupt1_pin, GPIO__RISING_EDGE);
 
   i2c1__init(false);
 }

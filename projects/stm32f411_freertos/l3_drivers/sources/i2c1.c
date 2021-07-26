@@ -341,11 +341,12 @@ void i2c1__write(uint8_t slave_address, uint8_t register_address, uint8_t *tx_by
 
   i2c1__generate_start_condition();
   i2c1__transmit_slave_address(slave_address & 0xFE);
-  i2c1__transmit_register_address(register_address);
 
   for (data_index = 0; data_index < length; data_index++)
   {
+    i2c1__transmit_register_address(register_address + data_index);
     i2c1__transmit_data_byte(tx_bytes[data_index]);
   }
   i2c1__wait_transmission_completion();
+  i2c1__generate_stop_condition();
 }
