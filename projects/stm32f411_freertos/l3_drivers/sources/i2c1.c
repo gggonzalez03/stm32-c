@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include "i2c1.h"
 
 #include "stm32f411xe.h"
@@ -231,7 +230,7 @@ static void i2c1__transmit_register_address(uint8_t register_address)
  *                      PUBLIC FUNCTION DEFINITIONS
  *
  *************************************************************************/
-void i2c1__init(void)
+void i2c1__init(bool fast_mode)
 {
   /**
    * Steps:
@@ -244,8 +243,18 @@ void i2c1__init(void)
 
   i2c1__software_reset();
   i2c1__set_clock_frequency();
-  i2c1__config_clock_control_standard_mode();
-  i2c1__config_trise_standard_mode();
+
+  if (fast_mode)
+  {
+    i2c1__config_clock_control_fast_mode();
+    i2c1__config_trise_fast_mode();
+  }
+  else
+  {
+    i2c1__config_clock_control_standard_mode();
+    i2c1__config_trise_standard_mode();
+  }
+
   i2c1__enable();
 }
 
