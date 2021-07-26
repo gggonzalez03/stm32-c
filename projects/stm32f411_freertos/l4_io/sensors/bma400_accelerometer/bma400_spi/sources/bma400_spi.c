@@ -4,6 +4,14 @@
 #include "bma400_spi_glue.h"
 
 /*************************************************************************
+ * @note
+ * LSB Sensitivity is calculated by (2^bit_width / (full_scale_rage * 2)) LSB/g
+ * Minimum Detection Limit is calculated by (full_scale_range * 2 / (2^bit_width)) g/LSB
+ *    Note that this is reciprocal of LSB Sensitivity
+ *    Note that the formula could also be rewritten as (full_scale_range / (2^(bit_width - 1)))
+ *************************************************************************/ 
+
+/*************************************************************************
  * 
  *                        PRIVATE DATA DEFINITIONS
  *
@@ -64,7 +72,7 @@ static void bma400_spi__fixed_odr_filter_100Hz(void)
   bma400_spi__write_to_register(acc_config2_reg, &odr_filter_fixed_100Hz, 1);
 }
 
-static void bma_400__enable_data_ready_interrupt(void)
+static void bma400_spi__enable_data_ready_interrupt(void)
 {
   uint8_t int_config0 = 0x1F;
   uint8_t data_ready_int = 0x80;
@@ -72,7 +80,7 @@ static void bma_400__enable_data_ready_interrupt(void)
   bma400_spi__write_to_register(int_config0, &data_ready_int, 1);
 }
 
-static void bma_400__map_data_ready_interrupt_to_int1_pin(void)
+static void bma400_spi__map_data_ready_interrupt_to_int1_pin(void)
 {
   uint8_t int_config1 = 0x21;
   uint8_t data_ready_int1 = 0x80;
@@ -121,15 +129,15 @@ bool bma400_spi__init(void)
   bma400_spi__delay_ms(2);
   bma400_spi__range_2g_osr_high_odr_100Hz();
   bma400_spi__fixed_odr_filter_100Hz();
-  bma_400__enable_data_ready_interrupt();
-  bma_400__map_data_ready_interrupt_to_int1_pin();
+  bma400_spi__enable_data_ready_interrupt();
+  bma400_spi__map_data_ready_interrupt_to_int1_pin();
 
   return true;
 }
 
 uint8_t bma400_spi__get_chip_id(void)
 {
-  const uint8_t chip_id_reg = 0x00;
+  uint8_t chip_id_reg = 0x00;
   uint8_t chip_id;
 
   bma400_spi__read_from_register(chip_id_reg, &chip_id, 1);
@@ -231,6 +239,16 @@ float bma400_spi__get_x_mps2(void)
   int16_t half_scale, x_raw;
   float x_mps2;
 
+  /**
+   * ±2 means there are 4 equal divisions in the scale range
+   * 12 bit is the resolution
+   *  means 2^12 = 4096 different values
+   * minimum detection limit then is (4 / (2^12)) = 0.0009765625g
+   * 
+   * That is equal to (2 / (2^11)) = 0.0009765625g
+   * This way, we use the ±2 full scale range in the calculation
+   * multiplying the numerator by 2 is the same as dividing the denominator by 2
+   **/ 
   half_scale = 1 << (bit_width - 1);
   x_raw = bma400_spi__get_x_raw();
   x_mps2 = (earth_gravity * x_raw * g_range) / half_scale;
